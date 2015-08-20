@@ -4,7 +4,7 @@ module type S = sig
   val get_id     : 'a t -> int
   val wait       : 'a t -> 'a
   val complete   : 'a t -> 'a -> PostCommitCAS.t
-  val rescind    : 'a t -> bool
+  val rescind    : 'a t -> 'a option
   val get_result : 'a t -> 'a option
 end
 
@@ -26,11 +26,12 @@ module Make (Sched : Scheduler.S) : S = struct
     CAS.map r (fun v ->
       match v with
       | Waiting None -> Some (Waiting (Some k))
-      | _ -> None);
+      | Waiting (Some _) | Rescinded -> failwith "Offer.wait(1)"
+      | Completed _ -> None);
     match !r with
     | Completed answer -> Some answer
     | Waiting (Some _) -> None
-    | _ -> failwith "Offer.wait")
+    | _ -> failwith "Offer.wait(2)")
 
   let complete r new_v =
     let old_v = !r in
@@ -45,10 +46,12 @@ module Make (Sched : Scheduler.S) : S = struct
     CAS.map r (fun v ->
       match v with
       | Waiting None -> Some Rescinded
-      | _ -> None);
+      | Rescinded | Waiting (Some _) -> failwith "Offer.rescind(1)"
+      | Completed _ -> None);
     match !r with
-    | Rescinded -> true
-    | _ -> false
+    | Rescinded -> None
+    | Completed v -> Some v
+    | _ -> failwith "Offer.rescind(2)"
 
   let get_result r =
     match !r with

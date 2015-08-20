@@ -4,7 +4,7 @@ module type S = sig
   val get_id     : 'a t -> int
   val wait       : 'a t -> 'a
   val complete   : 'a t -> 'a -> PostCommitCAS.t
-  val rescind    : 'a t -> bool
+  val rescind    : 'a t -> 'a option
   val get_result : 'a t -> 'a option
 end
 
