@@ -3,6 +3,7 @@ module type S = sig
   val never       : ('a,'b) t
   val constant    : 'a -> ('b,'a) t
   val post_commit : ('a -> unit) -> ('a, 'a) t
+  val lift        : ('a -> 'b option) -> ('a,'b) t
   val (>>)        : ('a,'b) t -> ('b,'c) t -> ('a,'c) t
 end
 
@@ -73,4 +74,13 @@ module Make (Sched: Scheduler.S) : S = struct
     let ret_val v = Done v in
     let new_rx v rx = Reaction.with_post_commit rx (fun () -> f v) in
     mk_reagent {ret_val; new_rx} commit
+
+  let lift (f : 'a -> 'b option) : ('a,'b) t =
+    let ret_val v =
+      match f v with
+      | None -> Block
+      | Some r -> Done r
+    in
+    mk_reagent {ret_val; new_rx = (fun _ v -> v)} commit
+
 end
