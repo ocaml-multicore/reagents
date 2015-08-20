@@ -6,7 +6,7 @@ type cas_kind = Real of CAS.t | Imm of bool
 
 type t = cas_kind * (unit -> unit)
 
-let cas r old_v new_v post_commit = (Real (CAS.cas r {expect = old_v; update = new_v}), post_commit)
+let cas r old_v new_v post_commit = (Real (CAS.cas r CAS.{expect = old_v; update = new_v}), post_commit)
 
 let is_on_ref (c, _) r =
   match c with
