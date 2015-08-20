@@ -1,8 +1,9 @@
 module type S = sig
   type ('a,'b) t
-  val never    : ('a,'b) t
-  val constant : 'a -> ('b,'a) t
-  val (>>)     : ('a,'b) t -> ('b,'c) t -> ('a,'c) t
+  val never       : ('a,'b) t
+  val constant    : 'a -> ('b,'a) t
+  val post_commit : ('a -> unit) -> ('a, 'a) t
+  val (>>)        : ('a,'b) t -> ('b,'c) t -> ('a,'c) t
 end
 
 module Make (Sched: Scheduler.S) : S = struct
@@ -44,18 +45,32 @@ module Make (Sched: Scheduler.S) : S = struct
       compose = (fun next -> next);
       try_react }
 
-  let rec mk_reagent : 'a 'b 'r. 'a result -> ('a,'r) t -> ('b,'r) t =
-    fun x k ->
+  type ('a,'b) mkr_info =
+    { ret_val : 'a -> 'b result;
+      new_rx  : 'a -> Reaction.t -> Reaction.t }
+
+  let rec mk_reagent : 'a 'b 'r. ('a,'b) mkr_info -> ('b,'r) t -> ('a,'r) t =
+    fun m k ->
       { may_sync = k.may_sync;
         always_commits = k.always_commits;
-        try_react = (fun _ rx o ->
-          match x with
-          | Done x -> k.try_react x rx o
+        try_react = (fun a rx o ->
+          match m.ret_val a with
+          | Done b -> k.try_react b (m.new_rx a rx) o
           | Block -> Block
           | Retry -> Retry);
-        compose = (fun next -> mk_reagent x (k.compose next))}
+        compose = (fun next -> mk_reagent m (k.compose next)) }
 
-  let constant (x : 'a) : ('b,'a) t = mk_reagent (Done x) commit
-  let retry : ('a,'b) t = mk_reagent Retry commit
-  let block : ('a,'b) t = mk_reagent Block commit
+  let constant (x : 'a) : ('b,'a) t =
+    mk_reagent {ret_val = (fun _ -> Done x); new_rx = (fun _ v -> v)} commit
+
+  let retry : ('a,'b) t =
+    mk_reagent {ret_val = (fun _ -> Retry); new_rx = (fun _ v -> v)} commit
+
+  let block : ('a,'b) t =
+    mk_reagent {ret_val = (fun _ -> Block); new_rx = (fun _ v -> v)} commit
+
+  let post_commit (f : 'a -> unit) : ('a,'a) t =
+    let ret_val v = Done v in
+    let new_rx v rx = Reaction.with_post_commit rx (fun () -> f v) in
+    mk_reagent {ret_val; new_rx} commit
 end
