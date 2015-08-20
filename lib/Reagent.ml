@@ -4,7 +4,11 @@ module type S = sig
   val constant    : 'a -> ('b,'a) t
   val post_commit : ('a -> unit) -> ('a, 'a) t
   val lift        : ('a -> 'b option) -> ('a,'b) t
+  val computed    : ('a -> (unit, 'b) t) -> ('a,'b) t
   val (>>)        : ('a,'b) t -> ('b,'c) t -> ('a,'c) t
+  val choose      : ('a,'b) t -> ('a,'b) t -> ('a,'b) t
+  val attempt     : ('a,'b) t -> ('a, 'b option) t
+  val run         : ('a,'b) t -> 'a -> 'b
 end
 
 module Make (Sched: Scheduler.S) : S = struct
@@ -82,5 +86,58 @@ module Make (Sched: Scheduler.S) : S = struct
       | Some r -> Done r
     in
     mk_reagent {ret_val; new_rx = (fun _ v -> v)} commit
+
+  let rec computed : 'a 'b 'r. ('a -> (unit, 'b) t) -> ('b, 'r) t -> ('a, 'r) t =
+    fun f k ->
+      { may_sync = true;
+        always_commits = false;
+        compose = (fun next -> computed f (k.compose next));
+        try_react = (fun a rx o -> ((f a).compose k).try_react () rx o) }
+
+  let computed f = computed f commit
+
+  let rec choose : 'a 'b 'r. ('a,'b) t -> ('a,'b) t -> ('a,'b) t =
+    fun r1 r2 ->
+      { always_commits = r1.always_commits && r1.always_commits;
+        may_sync = r1.may_sync || r2.may_sync;
+        compose = (fun next -> choose (r1.compose next) (r2.compose next));
+        try_react = fun a rx offer ->
+          match r1.try_react a rx offer with
+          | (Done _) as v -> v
+          | Block -> r2.try_react a rx offer
+          | Retry ->
+                match r2.try_react a rx offer with
+                | Block | Retry -> Retry
+                | v -> v }
+
+  let attempt (r : ('a,'b) t) : ('a,'b option) t =
+    choose (r >> lift (fun x -> Some (Some x))) (constant None)
+
+  let run r v =
+    let b = Backoff.create () in
+    let pause () = Backoff.once b in
+    let rec without_offer () =
+      match r.try_react v Reaction.empty None with
+      | Done res -> res
+      | Retry ->
+        ( pause ();
+          if r.may_sync then with_offer () else without_offer () )
+      | Block -> with_offer ()
+    and with_offer () =
+      let offer = Offer.make () in
+      match r.try_react v Reaction.empty (Some offer) with
+      | Done res ->
+          (assert (Offer.get_result offer = Some res); res)
+      | f ->
+        ( begin
+            match f with
+            | Block -> Offer.wait offer
+            | _ -> pause ()
+          end;
+          match Offer.rescind offer with
+          | Some ans -> ans
+          | None -> with_offer () )
+    in
+    without_offer ()
 
 end

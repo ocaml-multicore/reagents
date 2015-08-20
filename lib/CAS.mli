@@ -34,9 +34,11 @@ val commit : t -> bool
 
 val kCAS : t list -> bool
 
-val try_map : 'a ref -> ('a -> 'a option) -> bool
+type 'a cas_result = Aborted | Failed | Success of 'a
 
-val map : 'a ref -> ('a -> 'a option) -> unit
+val try_map : 'a ref -> ('a -> 'a option) -> 'a cas_result
+
+val map : 'a ref -> ('a -> 'a option) -> 'a cas_result
 
 val incr : int ref -> unit
 

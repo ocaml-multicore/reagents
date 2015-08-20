@@ -98,18 +98,22 @@ end
 
 open Sugar
 
+type 'a cas_result = Aborted | Failed | Success of 'a
+
 let try_map r f =
   let s = !r in
   match f s with
-  | None -> true
-  | Some v -> r <!= s --> v
+  | None -> Aborted
+  | Some v ->
+      if r <!= s --> v then Success s else Failed
 
 let map r f =
   let b = Backoff.create () in
   let rec loop () =
-    if try_map r f then ()
-    else ( Backoff.once b ; loop ())
+    match try_map r f with
+    | Failed -> (Backoff.once b; loop ())
+    | v -> v
   in loop ()
 
-let incr r = map r (fun x -> Some (x + 1))
-let decr r = map r (fun x -> Some (x - 1))
+let incr r = ignore @@ map r (fun x -> Some (x + 1))
+let decr r = ignore @@ map r (fun x -> Some (x - 1))
