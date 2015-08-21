@@ -1,0 +1,76 @@
+(*
+ * Copyright (c) 2015, Théo Laurent <theo.laurent@ens.fr>
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ *)
+
+(* Michael-Scott queue *)
+(* TODO KC: Replace with concurrent lock free bag --
+ * http://dl.acm.org/citation.cfm?id=1989550 *)
+
+open CAS.Sugar
+
+type 'a node =
+  | Nil
+  | Next of 'a * 'a node CAS.ref
+
+type 'a t =
+  { head : 'a node CAS.ref ;
+    tail : 'a node CAS.ref }
+
+let create () =
+  let head = (Next (Obj.magic (), ref Nil)) in
+  { head = ref head ; tail = ref head }
+
+let pop q =
+  let b = Backoff.create () in
+  let rec loop () =
+    let s = !(q.head) in
+    let nhead = match s with
+      | Nil -> failwith "MSQueue.pop: impossible"
+      | Next (_, x) -> !x
+    in match nhead with
+     | Nil -> None
+     | Next (v, _) when (q.head <!= s --> nhead) -> Some v
+     | _ -> Backoff.once b ; loop ()
+  in loop ()
+
+let push q v =
+  let rec find_tail_and_enq curr_end node =
+    if curr_end <!= (Nil --> node) then ()
+    else match !curr_end with
+         | Nil -> find_tail_and_enq curr_end node
+         | Next (_, n) -> find_tail_and_enq n node
+  in
+  let newnode = Next (v, ref Nil) in
+  match !(q.tail) with
+  | Nil         -> failwith "HW_MSQueue.push: impossible"
+  | Next (_, n) -> find_tail_and_enq n newnode ;
+                   ignore (q.tail <!= !(q.tail) --> newnode)
+
+let rec pop_until f q =
+  match pop q with
+  | None -> None
+  | Some v -> if f v then (Some v) else pop_until f q
+
+type 'a cursor = 'a node
+
+let snapshot q =
+  match !(q.head) with
+  | Nil -> failwith "MSQueue.snapshot: impossible"
+  | Next (_, n) -> !n
+
+let next c =
+  match c with
+  | Nil -> None
+  | Next (a, n) -> Some (a, !n)
