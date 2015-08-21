@@ -58,10 +58,10 @@ let push q v =
   | Next (_, n) -> find_tail_and_enq n newnode ;
                    ignore (q.tail <!= !(q.tail) --> newnode)
 
-let rec pop_until f q =
+let rec pop_until q f =
   match pop q with
   | None -> None
-  | Some v -> if f v then (Some v) else pop_until f q
+  | Some v -> if f v then (Some v) else pop_until q f
 
 type 'a cursor = 'a node
 

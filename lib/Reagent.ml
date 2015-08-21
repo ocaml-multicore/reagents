@@ -1,5 +1,14 @@
 module type S = sig
-  type ('a,'b) t
+
+  type reaction
+  type 'a offer
+  type 'a result = Block | Retry | Done of 'a
+  type ('a,'b) t =
+    { try_react : 'a -> reaction -> 'b offer option -> 'b result;
+      compose : 'r. ('b,'r) t -> ('a,'r) t;
+      always_commits : bool;
+      may_sync : bool }
+
   val never       : ('a,'b) t
   val constant    : 'a -> ('b,'a) t
   val post_commit : ('a -> unit) -> ('a, 'a) t
@@ -9,12 +18,20 @@ module type S = sig
   val choose      : ('a,'b) t -> ('a,'b) t -> ('a,'b) t
   val attempt     : ('a,'b) t -> ('a, 'b option) t
   val run         : ('a,'b) t -> 'a -> 'b
+
+  (* Private *)
+  val commit      : ('a,'a) t
 end
 
-module Make (Sched: Scheduler.S) : S = struct
+module Make (Sched: Scheduler.S) : S
+  with type reaction = Reaction.Make(Sched).t
+   and type 'a offer = 'a Offer.Make(Sched).t = struct
 
   module Reaction = Reaction.Make(Sched)
   module Offer = Offer.Make(Sched)
+
+  type reaction = Reaction.t
+  type 'a offer = 'a Offer.t
 
   type 'a result = Block | Retry | Done of 'a
 
@@ -67,12 +84,6 @@ module Make (Sched: Scheduler.S) : S = struct
 
   let constant (x : 'a) : ('b,'a) t =
     mk_reagent {ret_val = (fun _ -> Done x); new_rx = (fun _ v -> v)} commit
-
-  let retry : ('a,'b) t =
-    mk_reagent {ret_val = (fun _ -> Retry); new_rx = (fun _ v -> v)} commit
-
-  let block : ('a,'b) t =
-    mk_reagent {ret_val = (fun _ -> Block); new_rx = (fun _ v -> v)} commit
 
   let post_commit (f : 'a -> unit) : ('a,'a) t =
     let ret_val v = Done v in

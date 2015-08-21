@@ -33,10 +33,11 @@ module Make (Sched : Scheduler.S) : S = struct
     match cas_result with
     (* If CAS was a success, then it is no longer this thread's responsibiliy to
      * resume itself. *)
-    | CAS.Success (Waiting None) -> None
+    | CAS.Success _ -> None
     (* If the CAS failed, then another thread changed the offer from (Waiting
      * None) to Completed or Rescinded. In this case, thread shouldn't wait. *)
-    | CAS.Aborted -> Some ())
+    | CAS.Aborted -> Some ()
+    | CAS.Failed  -> failwith "Offer.wait(2)")
 
   let complete r new_v =
     let old_v = !r in

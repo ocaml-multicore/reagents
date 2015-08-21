@@ -1,4 +1,7 @@
 type 'a ref = 'a CAS.ref
+val ref : 'a -> 'a ref
+val get : 'a ref -> 'a
+
 type t
 val return    : bool -> (unit -> unit) -> t
 val cas       : 'a ref -> 'a -> 'a -> (unit -> unit) -> t
