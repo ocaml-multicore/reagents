@@ -24,30 +24,6 @@ module Make (Sched : Scheduler.S) : S with
     | Some _ -> false
     | None -> Reaction.cas_count rx = 0 && k.always_commits
 
-  (* let complete_exchange : 'a 'b 'c 'd. ('a,'b) message -> ('a,'d) reagent -> ('c,'d) reagent =
-    fun m rec_k ->
-      let consume_and_continue offer comp_with cont_with rx k encl_offer =
-        let cas = Offer.complete offer comp_with in
-        let new_rx =
-          if can_cas_immediate k rx encl_offer then
-            match PostCommitCAS.commit cas with
-            | None -> None
-            | Some f -> ( f (); Some rx )
-          else Some (Reaction.with_CAS rx cas)
-        in
-        match new_rx with
-        | None -> Retry
-        | Some new_rx -> k.try_react cont_with new_rx encl_offer
-      in
-      let try_react c rx encl_offer =
-        let Message (payload, sender_rx, sender_k, offer) = m in
-        consume_and_continue offer c payload (Reaction.union rx sender_rx) receiverK encl_offer
-      in
-      { may_sync = receiverK.may_sync;
-        always_commits = false;
-        compose = (fun next -> complete_exchange m (receiverK.compose next));
-        try_react } *)
-
   type ('a,'b) endpoint =
     { outgoing: ('a,'b) message MSQueue.t;
       incoming: ('b,'a) message MSQueue.t }
@@ -65,7 +41,7 @@ module Make (Sched : Scheduler.S) : S with
         (* Merged continuation *)
         let swapK payload sender_rx sender_offer =
           let swapk_try_react c receiver_rx receiver_offer =
-            let merged_rx = Reaction.union sender_rx receiver_rx in
+            let rx = Reaction.union sender_rx receiver_rx in
             let cas = Offer.complete sender_offer c in
             let new_rx =
               if can_cas_immediate k receiver_rx receiver_offer then
@@ -76,7 +52,7 @@ module Make (Sched : Scheduler.S) : S with
             in
             match new_rx with
             | None -> Retry
-            | Some new_rx -> k.try_react payload merged_rx receiver_offer
+            | Some new_rx -> k.try_react payload new_rx receiver_offer
           in
           { always_commits = false;
             may_sync = k.may_sync;
