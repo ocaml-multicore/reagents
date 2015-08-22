@@ -7,15 +7,16 @@ module type S = sig
   val computed    : ('a -> (unit, 'b) t) -> ('a,'b) t
   val (>>)        : ('a,'b) t -> ('b,'c) t -> ('a,'c) t
   val choose      : ('a,'b) t -> ('a,'b) t -> ('a,'b) t
+  val (<+>)       : ('a,'b) t -> ('a,'b) t -> ('a,'b) t
   val attempt     : ('a,'b) t -> ('a, 'b option) t
   val run         : ('a,'b) t -> 'a -> 'b
 
-  module Ref : Ref.S
-  module Swap : Swap.S
+  module Ref : Ref.S with type ('a,'b) reagent = ('a,'b) t
+  module Channel : Channel.S with type ('a,'b) reagent = ('a,'b) t
 end
 
 module Make (Sched: Scheduler.S) : S = struct
   include Reagent.Make(Sched)
   module Ref = Ref.Make(Sched)
-  module Swap = Swap.Make(Sched)
+  module Channel = Channel.Make(Sched)
 end

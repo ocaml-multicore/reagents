@@ -16,6 +16,7 @@ module type S = sig
   val computed    : ('a -> (unit, 'b) t) -> ('a,'b) t
   val (>>)        : ('a,'b) t -> ('b,'c) t -> ('a,'c) t
   val choose      : ('a,'b) t -> ('a,'b) t -> ('a,'b) t
+  val (<+>)       : ('a,'b) t -> ('a,'b) t -> ('a,'b) t
   val attempt     : ('a,'b) t -> ('a, 'b option) t
   val run         : ('a,'b) t -> 'a -> 'b
 
@@ -120,6 +121,8 @@ module Make (Sched: Scheduler.S) : S
 
   let attempt (r : ('a,'b) t) : ('a,'b option) t =
     choose (r >> lift (fun x -> Some (Some x))) (constant None)
+
+  let (<+>) = choose
 
   let run r v =
     let b = Backoff.create () in
