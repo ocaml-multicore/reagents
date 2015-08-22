@@ -37,10 +37,6 @@ module Make (Sched : Scheduler.S) : S with
   type ('a,'b) message =
     Message : 'a * Reaction.t * ('b, 'c) t * 'c Offer.t -> ('a,'b) message
 
-  let can_cas_immediate k rx = function
-    | Some _ -> false
-    | None -> Reaction.cas_count rx = 0 && k.always_commits
-
   type ('a,'b) endpoint =
     { outgoing: ('a,'b) message MSQueue.t;
       incoming: ('b,'a) message MSQueue.t }

@@ -69,10 +69,6 @@ module Make(Sched: Scheduler.S)
       | Some (Offer ov) -> ignore (Offer.rescind ov)
     in loop ()
 
-  let can_cas_immediate k rx = function
-    | Some _ -> false
-    | None -> Reaction.cas_count rx = 0 && k.always_commits
-
   let rec cas : 'a 'r. 'a ref -> 'a -> 'a -> (unit, 'r) reagent -> (unit,'r) reagent =
     fun r expect update k ->
       let try_react () rx o =
