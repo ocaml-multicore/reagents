@@ -29,10 +29,9 @@ let main () =
   (* Test 1 *)
   printf "**** Test 1 ****\n%!";
   let (ep1,ep2) = mk_chan () in
-  fork (fun () -> printf "[%s] %d\n%!" (id_str ()) @@ run (swap ep2) 456);
-  fork (fun () ->
-    printf "[%s] %d\n%!" (id_str ()) @@ run (swap ep1 >> swap ep1) 123);
-  printf "[%s] %d\n%!" (id_str ()) @@ run (swap ep2) 789;
+  fork (fun () -> printf "[%s] %d\n%!" (id_str ()) @@ run (swap ep2) 0);
+  fork (fun () -> printf "[%s] %d\n%!" (id_str ()) @@ run (swap ep1 >> swap ep1) 1);
+  printf "[%s] %d\n%!" (id_str ()) @@ run (swap ep2) 2;
 
   (* Test 2 *)
   yield ();
@@ -50,13 +49,9 @@ let main () =
   let (ep1,ep2) = mk_chan () in
   fork (fun () ->
     printf "[%s] %d\n%!" (id_str ()) @@ run (swap ep1 >> swap ep1) 0);
-  printf "will fail! Reagents are not as powerful as communicating transactions!\n%!";
+  printf "Will fail! Reagents are not as powerful as communicating transactions!\n%!";
   printf "[%s] %d\n%!" (id_str ()) @@ run (swap ep2 >> swap ep2) 1;
   printf "should not see this!\n";
   ()
-
-(* remark: Reagent's blocking threads are completetly ignored by the   *)
-(* scheduler until they are waken, so if they aren't, the program just *)
-(* terminate anywya...                                                 *)
 
 let () = Scheduler.run main
