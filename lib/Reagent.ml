@@ -41,9 +41,6 @@ module Make (Sched: Scheduler.S) : S
       always_commits : bool;
       may_sync : bool }
 
-  type ('a,'b) message =
-    Message : 'a * Reaction.t * ('b, 'r) t * 'r Offer.t -> ('a,'b) message
-
   let (>>) r1 r2 = r1.compose r2
 
   let rec never : 'a 'b. ('a,'b) t =

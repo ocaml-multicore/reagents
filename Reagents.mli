@@ -14,8 +14,4 @@ module type S = sig
   module Swap : Swap.S
 end
 
-module Make (Sched: Scheduler.S) : S = struct
-  include Reagent.Make(Sched)
-  module Ref = Ref.Make(Sched)
-  module Swap = Swap.Make(Sched)
-end
+module Make (Sched: Scheduler.S) : S

@@ -1,6 +1,8 @@
 module type S = sig
   type 'a t
   val make       : unit -> 'a t
+  val equal      : 'a t -> 'b t -> bool
+  val is_active  : 'a t -> bool
   val get_id     : 'a t -> int
   val wait       : 'a t -> unit
   val complete   : 'a t -> 'a -> PostCommitCAS.t
@@ -21,6 +23,12 @@ module Make (Sched : Scheduler.S) : S = struct
   let make () = ref (Waiting None)
 
   let get_id r = CAS.get_id r
+
+  let equal o1 o2 = get_id o1 = get_id o2
+
+  let is_active o = match !o with
+    | Waiting _ -> true
+    | _ -> false
 
   let wait r = Sched.suspend (fun k ->
     let cas_result =
