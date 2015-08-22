@@ -1,5 +1,6 @@
 (*
  * Copyright (c) 2015, Théo Laurent <theo.laurent@ens.fr>
+ * Copyright (c) 2015, KC Sivaramakrishnan <sk826@cl.cam.ac.uk>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,6 +16,7 @@
  *)
 
 (* Michael-Scott queue *)
+
 (* TODO KC: Replace with concurrent lock free bag --
  * http://dl.acm.org/citation.cfm?id=1989550 *)
 
