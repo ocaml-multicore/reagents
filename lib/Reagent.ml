@@ -150,8 +150,8 @@ module Make (Sched: Scheduler.S) : S
       match r.try_react v Reaction.empty None with
       | Done res -> res
       | Retry ->
-        ( pause ();
-          if r.may_sync then with_offer () else without_offer () )
+            ( pause ();
+              if r.may_sync then with_offer () else without_offer () )
       | Block -> with_offer ()
     and with_offer () =
       let offer = Offer.make () in

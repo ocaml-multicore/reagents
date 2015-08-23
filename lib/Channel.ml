@@ -35,7 +35,35 @@ module Make (Sched : Scheduler.S) : S with
   type ('a,'b) reagent = ('a,'b) Reagent.t
 
   type ('a,'b) message =
-    Message : 'a * Reaction.t * ('b, 'c) t * 'c Offer.t -> ('a,'b) message
+    Message : 'c Offer.t * ('b,'a) t -> ('a,'b) message
+
+  let mk_message (type a) (type b) (type c) (payload : a) (sender_rx : Reaction.t)
+                 (sender_k : (b,c) t) (sender_offer : c Offer.t) =
+    let rec complete_exchange : 'd. (a,'d) t -> (c,'d) t =
+      fun receiver_k ->
+        let try_react c receiver_rx receiver_offer =
+          let rx = Reaction.union sender_rx receiver_rx in
+          let cas = Offer.complete sender_offer c in
+          let new_rx =
+            if can_cas_immediate receiver_k receiver_rx receiver_offer then
+              match PostCommitCAS.commit cas with
+              | None -> None
+              | Some f -> ( f (); Some rx )
+            else Some (Reaction.with_CAS rx cas)
+          in
+          match new_rx with
+          | None -> Retry
+          | Some new_rx -> receiver_k.try_react payload new_rx receiver_offer
+        in
+        { always_commits = false;
+          may_sync = receiver_k.may_sync;
+          compose = (fun next -> complete_exchange (receiver_k.compose next));
+          try_react }
+    in
+    let complete_exchange =
+          sender_k.compose (complete_exchange Reagent.commit)
+    in
+    Message (sender_offer, complete_exchange)
 
   type ('a,'b) endpoint =
     { outgoing: ('a,'b) message MSQueue.t;
@@ -51,32 +79,11 @@ module Make (Sched : Scheduler.S) : S with
     fun ep k ->
       let {outgoing; incoming} = ep in
       let try_react a rx offer =
-        (* Merged continuation *)
-        let swapK payload sender_rx sender_offer =
-          let swapk_try_react c receiver_rx receiver_offer =
-            let rx = Reaction.union sender_rx receiver_rx in
-            let cas = Offer.complete sender_offer c in
-            let new_rx =
-              if can_cas_immediate k receiver_rx receiver_offer then
-                match PostCommitCAS.commit cas with
-                | None -> None
-                | Some f -> ( f (); Some rx )
-              else Some (Reaction.with_CAS rx cas)
-            in
-            match new_rx with
-            | None -> Retry
-            | Some new_rx -> k.try_react payload new_rx receiver_offer
-          in
-          { always_commits = false;
-            may_sync = k.may_sync;
-            compose = (fun _ -> failwith "swapK.compose : impossible");
-            try_react = swapk_try_react }
-        in
         (* Search for matching offers *)
         let rec try_from cursor retry =
           match MSQueue.next cursor with
           | None -> if (retry) then Retry else Block
-          | Some (Message (payload,sender_rx,sender_k,sender_offer), cursor) ->
+          | Some (Message (sender_offer,exchange), cursor) ->
               let same_offer o = function
               | None -> false
               | Some o' -> Offer.equal o o'
@@ -87,16 +94,16 @@ module Make (Sched : Scheduler.S) : S with
                     try_from cursor retry
                 else (* Found matching offer *)
                   let new_rx = Reaction.with_offer rx sender_offer in
-                  let merged = sender_k.compose (swapK payload sender_rx sender_offer) in
+                  let merged = exchange.compose k in
                   match merged.try_react a new_rx offer with
                   | Retry -> try_from cursor true
                   | Block -> try_from cursor retry
                   | v -> v )
         in
-        let () = match offer with
+        let () = ( match offer with
           | Some offer (* when (not k.may_sync) *)->
-              MSQueue.push outgoing (Message (a,rx,k,offer))
-          | _ -> ()
+              MSQueue.push outgoing (mk_message a rx k offer)
+          | _ -> () )
         in
         try_from (MSQueue.snapshot incoming) false
       in
