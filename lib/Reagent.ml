@@ -157,7 +157,6 @@ module Make (Sched: Scheduler.S) : S
       let offer = Offer.make () in
       match r.try_react v Reaction.empty (Some offer) with
       | Done res -> res
-          (* assert (Offer.get_result offer = Some res); res *)
       | f ->
         ( begin
             match f with

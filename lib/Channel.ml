@@ -94,9 +94,9 @@ module Make (Sched : Scheduler.S) : S with
                   | v -> v )
         in
         let () = match offer with
-          | None -> ()
-          | Some offer -> (* XXX KC: if !k.may_sync then *)
+          | Some offer (* when (not k.may_sync) *)->
               MSQueue.push outgoing (Message (a,rx,k,offer))
+          | _ -> ()
         in
         try_from (MSQueue.snapshot incoming) false
       in

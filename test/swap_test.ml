@@ -29,8 +29,8 @@ let main () =
   (* Test 1 *)
   printf "**** Test 1 ****\n%!";
   let (ep1,ep2) = mk_chan () in
-  fork (fun () -> printf "[%s] %d\n%!" (id_str ()) @@ run (swap ep2) 0);
   fork (fun () -> printf "[%s] %d\n%!" (id_str ()) @@ run (swap ep1 >> swap ep1) 1);
+  fork (fun () -> printf "[%s] %d\n%!" (id_str ()) @@ run (swap ep2) 0);
   printf "[%s] %d\n%!" (id_str ()) @@ run (swap ep2) 2;
 
   (* Test 2 *)
