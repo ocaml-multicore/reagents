@@ -25,6 +25,7 @@ module type S = sig
   val (>>)        : ('a,'b) t -> ('b,'c) t -> ('a,'c) t
   val choose      : ('a,'b) t -> ('a,'b) t -> ('a,'b) t
   val (<+>)       : ('a,'b) t -> ('a,'b) t -> ('a,'b) t
+  val (<*>)       : ('a,'b) t -> ('a,'c) t -> ('a, 'b * 'c) t
   val attempt     : ('a,'b) t -> ('a, 'b option) t
   val run         : ('a,'b) t -> 'a -> 'b
 

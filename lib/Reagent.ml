@@ -34,6 +34,7 @@ module type S = sig
   val (>>)        : ('a,'b) t -> ('b,'c) t -> ('a,'c) t
   val choose      : ('a,'b) t -> ('a,'b) t -> ('a,'b) t
   val (<+>)       : ('a,'b) t -> ('a,'b) t -> ('a,'b) t
+  val (<*>)       : ('a,'b) t -> ('a,'c) t -> ('a, 'b * 'c) t
   val attempt     : ('a,'b) t -> ('a, 'b option) t
   val run         : ('a,'b) t -> 'a -> 'b
 
@@ -142,6 +143,33 @@ module Make (Sched: Scheduler.S) : S
     choose (r >> lift (fun x -> Some (Some x))) (constant None)
 
   let (<+>) = choose
+
+  let rec first : 'a 'b 'c 'r. ('a,'b) t -> ('b * 'c,'r) t -> ('a * 'c, 'r) t =
+    fun r k ->
+      let try_react (a,c) rx offer =
+        (r >> lift (fun b -> Some (b, c)) >> k).try_react a rx offer
+      in
+      { may_sync = r.may_sync || k.may_sync;
+        always_commits = r.always_commits && k.always_commits;
+        compose = (fun next -> first r (k.compose next));
+        try_react }
+
+  let first (r : ('a,'b) t) : ('a * 'c, 'b * 'c) t = first r commit
+
+  let rec second : 'a 'b 'c 'r. ('a,'b) t -> ('c * 'b,'r) t -> ('c * 'a, 'r) t =
+    fun r k ->
+      let try_react (c,a) rx offer =
+        (r >> lift (fun b -> Some (c, b)) >> k).try_react a rx offer
+      in
+      { may_sync = r.may_sync || k.may_sync;
+        always_commits = r.always_commits && k.always_commits;
+        compose = (fun next -> second r (k.compose next));
+        try_react }
+
+  let second (r : ('a,'b) t) : ('c * 'a, 'c * 'b) t = second r commit
+
+  let (<*>) (r1 : ('a,'b) t) (r2 : ('a,'c) t) : ('a,'b*'c) t =
+    lift (fun a -> Some (a,a)) >> first (r1) >> second (r2)
 
   let run r v =
     let b = Backoff.create () in
