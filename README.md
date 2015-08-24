@@ -1,2 +1,2 @@
-# reagents
+# Reagents
 Reagents for multicore OCaml
