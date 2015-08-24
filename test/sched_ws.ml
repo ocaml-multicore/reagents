@@ -19,6 +19,7 @@ module type S = sig
   val suspend : ('a cont -> 'a option) -> 'a
   val resume  : 'a cont -> 'a -> unit
   val fork    : (unit -> unit) -> unit
+  val fork_on : (unit -> unit) -> int -> unit
   val yield   : unit -> unit
   val get_tid : unit -> int
   val run     : (unit -> unit) -> unit

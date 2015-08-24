@@ -49,7 +49,7 @@ module Make (Reagents: Reagents.S) : S
         let fwd_tail nv () = ignore @@ run (attempt @@ Ref.cas tail ov nv) () in
         match s with
         | Nil -> Ref.cas r s n >> post_commit (fwd_tail n)
-        | Next (_,_) as nv -> ( fwd_tail nv; find_and_enq n tail )
+        | Next (_,_) as nv -> ( fwd_tail nv (); find_and_enq n tail )
 
   let push q = computed (fun x ->
     let new_node = Next (x, Ref.mk_ref Nil) in

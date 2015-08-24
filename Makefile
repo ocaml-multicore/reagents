@@ -1,4 +1,4 @@
-TEST=test/swap_test.byte test/ref_test.byte test/counter_test.byte
+TEST=test/swap_test.byte test/ref_test.byte test/counter_test.byte test/queue_test.byte test/stack_test.byte
 FLAGS=-Is lib,data,sync -lib unix
 
 all: reagents data sync tests
