@@ -140,7 +140,7 @@ let main () =
   let (m,sd) = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
   printf "Hand-written MSQueue: mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m);
 
-  let module M = Test(MakeQ(Data.MichaelScottQueue)) in
+  let module M = Test(MakeQ(Data.MichaelScott_queue)) in
   let (m,sd) = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
   printf "Reagent MSQueue: mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m)
 

@@ -48,8 +48,10 @@ let get_cas_id (CAS ({id;_},_)) = id
 let commit (CAS (r, { expect ; update })) =
   let s = r.content in
   match s with
-  | Idle a when a == expect -> compare_and_swap r s (Idle update)
-  | _                         -> false
+  | Idle a when a == expect ->
+      if expect == update then true
+      else compare_and_swap r s (Idle update)
+  | _ -> false
 
 let semicas (CAS (r, { expect ; _ })) =
   let s = r.content in
