@@ -1,3 +1,6 @@
+(* A two-way exchanger. Unlike channels, exchanger does not distinguish between
+ * the two channel endpoints. *)
+
 module type S = sig
   type 'a t
   type ('a,'b) reagent
