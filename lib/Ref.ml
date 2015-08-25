@@ -19,7 +19,7 @@ module type S = sig
   type 'a ref
   type ('a,'b) reagent
   val mk_ref : 'a -> 'a ref
-  val read   : ?push:bool -> 'a ref -> (unit, 'a) reagent
+  val read   : 'a ref -> (unit, 'a) reagent
   val cas    : 'a ref -> 'a -> 'a -> (unit, unit) reagent
   val upd    : 'a ref -> ('a -> 'b -> ('a *'c) option) -> ('b,'c) reagent
 end
@@ -45,22 +45,22 @@ module Make(Sched: Scheduler.S)
 
   let mk_ref v = { data = CAS.ref v; offers = MSQueue.create () }
 
-  let rec read : 'a 'r. bool -> 'a ref -> ('a,'r) reagent -> (unit,'r) reagent =
-    fun push r k ->
+  let rec read : 'a 'r. 'a ref -> ('a,'r) reagent -> (unit,'r) reagent =
+    fun r k ->
       let try_react () rx o =
         let () = match o with
           | None -> ()
-          | Some ov -> if push then MSQueue.push r.offers (Offer ov) else ()
+          | Some ov -> MSQueue.push r.offers (Offer ov)
         in
         let v = CAS.get r.data in
         k.try_react v rx o
       in
         { always_commits = k.always_commits;
           may_sync = k.may_sync;
-          compose = (fun next -> read push r (k.compose next));
+          compose = (fun next -> read r (k.compose next));
           try_react }
 
-  let read ?(push=true) r = read push r Reagent.commit
+  let read r = read r Reagent.commit
 
   let wake_all q =
     let rec loop () =
