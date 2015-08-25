@@ -31,34 +31,19 @@ let (num_doms, num_items) =
 
 let items_per_dom = num_items / num_doms
 
-let () = Printf.printf "items_per_domain = %d\n%!" items_per_dom
+let () = Printf.printf "[%d] items_per_domain = %d\n%!" (Domain.self ()) items_per_dom
 
 module M = struct
   let num_domains = num_doms
 end
-
 module S = Sched_ws.Make (M)
+
+let id_str () = Printf.sprintf "%d:%d" (Domain.self ()) (S.get_tid ())
 
 module type BARRIER = sig
   type t
   val create : int -> t
   val finish : t -> unit
-end
-
-module Barrier : BARRIER = struct
-
-  type t = (int CAS.ref * bool ref)
-
-  let create n = (CAS.ref n, ref false)
-
-  let finish (r, d) =
-    let rec loop () =
-      if !d then ()
-      else ( S.yield (); loop ())
-    in
-    CAS.decr r;
-    if CAS.get r = 0 then d := true
-    else loop ()
 end
 
 module Reagents = Reagents.Make (S)
@@ -110,27 +95,34 @@ module Benchmark = struct
     get_mean_sd r
 end
 
+module Sync = Reagents_sync.Make(Reagents)
+module CDL  = Sync.Countdown_latch
+
 module Test (Q : QUEUE) = struct
 
   let run num_doms items_per_domain =
     let q : int Q.t = Q.create () in
-    let b : Barrier.t = Barrier.create num_doms in
+    let b = CDL.create num_doms in
     (* initialize work *)
     let rec produce = function
-      | 0 -> printf "[%d] production complete\n%!" (Domain.self ())
+      | 0 -> ()
       | i -> Q.push q i; produce (i-1)
     in
     let rec consume i =
       match Q.pop q with
-      | None -> printf "[%d] consumed=%d\n%!" (Domain.self ()) i
+      | None -> printf "consumed=%d\n%!" i
       | Some _ -> consume (i+1)
     in
     for i = 1 to num_doms - 1 do
-      S.fork_on (fun () -> produce items_per_domain; consume 0; Barrier.finish b) i
+      S.fork_on (fun () ->
+        produce items_per_domain;
+        consume 0;
+        run (CDL.count_down b) ()) i
     done;
     produce items_per_domain;
     consume 0;
-    Barrier.finish b
+    run (CDL.count_down b) ();
+    run (CDL.await b) ()
 end
 
 module Data = Reagents_data.Make(Reagents)
@@ -139,6 +131,10 @@ let main () =
   let module M = Test(MSQueue) in
   let (m,sd) = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
   printf "Hand-written MSQueue: mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m);
+
+  let module M = Test(Lock_queue) in
+  let (m,sd) = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
+  printf "Lock_queue : mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m);
 
   let module M = Test(MakeQ(Data.MichaelScott_queue)) in
   let (m,sd) = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in

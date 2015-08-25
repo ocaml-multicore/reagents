@@ -19,7 +19,7 @@ module type S = sig
   type 'a ref
   type ('a,'b) reagent
   val mk_ref : 'a -> 'a ref
-  val read   : 'a ref -> (unit, 'a) reagent
+  val read   : ?push:bool -> 'a ref -> (unit, 'a) reagent
   val cas    : 'a ref -> 'a -> 'a -> (unit, unit) reagent
   val upd    : 'a ref -> ('a -> 'b -> ('a *'c) option) -> ('b,'c) reagent
 end

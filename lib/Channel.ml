@@ -100,11 +100,13 @@ module Make (Sched : Scheduler.S) : S with
                   | Block -> try_from cursor retry
                   | v -> v )
         in
-        let () = ( match offer with
+        begin
+          match offer with
           | Some offer (* when (not k.may_sync) *)->
               MSQueue.push outgoing (mk_message a rx k offer)
-          | _ -> () )
-        in
+          | _ -> ()
+        end;
+        MSQueue.clean_until incoming (fun (Message(o,_)) -> Offer.is_active o);
         try_from (MSQueue.snapshot incoming) false
       in
       { always_commits = false;

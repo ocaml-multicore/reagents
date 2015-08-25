@@ -39,28 +39,6 @@ end
 
 module S = Sched_ws.Make (M)
 
-module type BARRIER = sig
-  type t
-  val create : int -> t
-  val finish : t -> unit
-end
-
-module Barrier : BARRIER = struct
-
-  type t = (int CAS.ref * bool ref)
-
-  let create n = (CAS.ref n, ref false)
-
-  let finish (r, d) =
-    let rec loop () =
-      if !d then ()
-      else ( S.yield (); loop ())
-    in
-    CAS.decr r;
-    if CAS.get r = 0 then d := true
-    else loop ()
-end
-
 module Reagents = Reagents.Make (S)
 open Reagents
 
@@ -110,11 +88,14 @@ module Benchmark = struct
     get_mean_sd r
 end
 
+module Sync = Reagents_sync.Make(Reagents)
+module CDL  = Sync.Countdown_latch
+
 module Test (Q : STACK) = struct
 
   let run num_doms items_per_domain =
     let q : int Q.t = Q.create () in
-    let b : Barrier.t = Barrier.create num_doms in
+    let b = CDL.create num_doms in
     (* initialize work *)
     let rec produce = function
       | 0 -> printf "[%d] production complete\n%!" (Domain.self ())
@@ -126,11 +107,15 @@ module Test (Q : STACK) = struct
       | Some _ -> consume (i+1)
     in
     for i = 1 to num_doms - 1 do
-      S.fork_on (fun () -> produce items_per_domain; consume 0; Barrier.finish b) i
+      S.fork_on (fun () ->
+        produce items_per_domain;
+        consume 0;
+        run (CDL.count_down b) ()) i
     done;
     produce items_per_domain;
     consume 0;
-    Barrier.finish b
+    run (CDL.count_down b) ();
+    run (CDL.await b) ()
 end
 
 module Data = Reagents_data.Make(Reagents)

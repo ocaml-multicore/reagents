@@ -49,7 +49,7 @@ module Make (S : sig val num_domains : int end) : S = struct
 
   open CAS.Sugar
 
-  let num_idle = ref 0
+  let num_threads = ref 0
 
   let sq = Array.init S.num_domains (fun _ -> MSQueue.create ())
 
@@ -63,17 +63,16 @@ module Make (S : sig val num_domains : int end) : S = struct
     let rec loop () = match MSQueue.pop queue with
       | Some k -> continue k ()
       | None ->
-          CAS.incr num_idle ; (* not the most efficient... *)
-          if !num_idle = S.num_domains
-          then ()
-          else ( Backoff.once b ;
-                 CAS.decr num_idle ;
-                 loop () )
+          if !num_threads = 0 then ()
+          else ( Backoff.once b ; loop () )
     in loop ()
   and dequeue () = dequeue_wid (Domain.self ())
   and enqueue k = enqueue_wid k (Domain.self ())
-  and spawn f (tid:int) = match f () with
-      | () -> dequeue ()
+  and spawn f (tid:int) =
+    CAS.incr num_threads;
+    begin
+      match f () with
+      | () -> (CAS.decr num_threads; dequeue ())
       | effect (Fork f) k -> enqueue k ; spawn f (fresh_tid ())
       | effect Yield k -> enqueue k ; dequeue ()
       | effect (Suspend f) k ->
@@ -85,12 +84,21 @@ module Make (S : sig val num_domains : int end) : S = struct
       | effect NumDomains k -> continue k (S.num_domains)
       | effect (ForkOn (f, dom_id)) k ->
           (enqueue_wid k dom_id; spawn f (fresh_tid ()))
+    end
 
   let run_with f num_domains =
-    for i = 1 to num_domains - 1  do
-      Domain.spawn (fun () -> dequeue ())
+    let started = ref 0 in
+    let worker () =
+      let b = Backoff.create ~max:16 () in
+      let rec loop () =
+        if !started = 1 then dequeue ()
+        else (Backoff.once b; loop ())
+      in loop ()
+    in
+    for i = 1 to num_domains - 1 do
+      Domain.spawn worker
     done ;
-    spawn f (fresh_tid ())
+    spawn (fun () -> CAS.incr started; f ()) (fresh_tid ())
 
   let run f = run_with f S.num_domains
 
