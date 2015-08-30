@@ -64,7 +64,7 @@ module Make (S : sig val num_domains : int end) : S = struct
       | Some k -> continue k ()
       | None ->
           if !num_threads = 0 then ()
-          else ( Backoff.once b ; Printf.printf "%d\n%!" (Domain.self()); loop () )
+          else ( Backoff.once b ; loop () )
     in loop ()
   and dequeue () = dequeue_wid (Domain.self ())
   and enqueue k = enqueue_wid k (Domain.self ())

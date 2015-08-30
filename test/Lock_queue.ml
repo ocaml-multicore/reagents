@@ -49,7 +49,7 @@ let pop (q,m) =
           | xs ->
               begin
                 match List.rev xs with
-                | [] -> Failwith.failwith_print "impossible"
+                | [] -> failwith "impossible"
                 | x::xs -> ( q := (xs,[]); Some x)
               end
         end
