@@ -17,3 +17,4 @@ tests:
 
 clean:
 	ocamlbuild -clean
+	find . -name "*~" | xargs rm
