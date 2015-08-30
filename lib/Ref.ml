@@ -66,7 +66,7 @@ module Make(Sched: Scheduler.S)
     let rec loop () =
       match MSQueue.pop q with
       | None -> ()
-      | Some (Offer ov) -> ignore (Offer.rescind ov)
+      | Some (Offer ov) -> ( ignore (Offer.rescind ov); loop () )
     in loop ()
 
   let rec cas : 'a 'r. 'a ref -> 'a -> 'a -> (unit, 'r) reagent -> (unit,'r) reagent =
