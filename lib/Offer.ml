@@ -31,28 +31,29 @@ module Make (Sched : Scheduler.S) : S = struct
   open CAS.Sugar
 
   type 'a status =
-    | Waiting of unit Sched.cont option
+    | Empty
+    | Waiting of unit Sched.cont
     | Rescinded
     | Completed of 'a
 
   type 'a t = 'a status CAS.ref
 
-  let make () = ref (Waiting None)
+  let make () = ref Empty
 
   let get_id r = CAS.get_id r
 
   let equal o1 o2 = get_id o1 = get_id o2
 
   let is_active o = match !o with
-    | Waiting _ -> true
-    | _ -> false
+    | Empty | Waiting _ -> true
+    | Rescinded | Completed _ -> false
 
   let wait r = Sched.suspend (fun k ->
     let cas_result =
       CAS.map r (fun v ->
         match v with
-        | Waiting None -> Some (Waiting (Some k))
-        | Waiting (Some _) -> failwith "Offer.wait(1)"
+        | Empty -> Some (Waiting k)
+        | Waiting _ -> failwith "Offer.wait(1)"
         | Completed _ | Rescinded -> None)
     in
     match cas_result with
@@ -60,30 +61,30 @@ module Make (Sched : Scheduler.S) : S = struct
      * resume itself. *)
     | CAS.Success _ -> None
     (* If the CAS failed, then another thread has already changed the offer from
-     * [Waiting None] to [Completed] or [Rescinded]. In this case, thread
-     * shouldn't wait. *)
+     * [Empty] to [Completed] or [Rescinded]. In this case, thread shouldn't
+     * wait. *)
     | CAS.Aborted -> Some ()
     | CAS.Failed  -> failwith "Offer.wait(2)")
 
   let complete r new_v =
     let old_v = !r in
     match old_v with
-    | Waiting (Some k) ->
+    | Waiting k ->
         PostCommitCAS.cas r old_v (Completed new_v) (fun () -> Sched.resume k ())
-    | Waiting None ->
+    | Empty ->
         PostCommitCAS.cas r old_v (Completed new_v) (fun () -> ())
-    | _ -> PostCommitCAS.return false (fun () -> ())
+    | Rescinded | Completed _ -> PostCommitCAS.return false (fun () -> ())
 
   let rescind r =
     let cas_result =
       CAS.map r (fun v ->
         match v with
-        | Waiting _ -> Some Rescinded
+        | Empty | Waiting _ -> Some Rescinded
         | Rescinded | Completed _ -> None)
     in
     ( begin
         match cas_result with
-        | CAS.Success (Waiting (Some t)) -> Sched.resume t ()
+        | CAS.Success (Waiting t) -> Sched.resume t ()
         | _ -> ()
       end;
       match !r with
