@@ -120,17 +120,19 @@ end
 
 module Data = Reagents_data.Make(Reagents)
 
+let num_runs = 10
+
 let main () =
   let module M = Test(Lock_stack) in
-  let (m,sd) = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
+  let (m,sd) = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 10 in
   printf "Lock stack: mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m);
 
   let module M = Test(MakeS(Data.Treiber_stack)) in
-  let (m,sd) = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
+  let (m,sd) = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 10 in
   printf "Treiber stack: mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m);
 
   let module M = Test(MakeS(Data.Elimination_stack)) in
-  let (m,sd) = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
+  let (m,sd) = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 10 in
   printf "Elimination stack: mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m)
 
 let () = S.run main

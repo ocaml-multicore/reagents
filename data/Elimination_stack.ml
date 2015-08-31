@@ -34,19 +34,25 @@ module Make (Reagents: Reagents.S) : S
 
   type 'a t =
     {stack     : 'a TS.t;
-     elim_push : ('a,unit) C.endpoint;
-     elim_pop  : (unit,'a) C.endpoint}
+     side_chan : (('a, unit) C.endpoint  (* elim_push *) * (unit,'a) C.endpoint (* elim_pop  *)) array }
+
+  let num_side_chan = 1
 
   let create () =
-    let (elim_push, elim_pop) = C.mk_chan () in
-    { stack = TS.create (); elim_push; elim_pop }
+    let side_chan = Array.init num_side_chan (fun _ -> C.mk_chan ()) in
+    { stack = TS.create (); side_chan }
 
-  let push r = TS.push r.stack <+> C.swap r.elim_push
+  let push r =
+    let push_chan = fst @@ r.side_chan.(Random.int (num_side_chan)) in
+    TS.push r.stack <+> C.swap push_chan
 
-  let pop r = TS.pop r.stack <+> C.swap r.elim_pop
+  let pop r =
+    let pop_chan = snd @@ r.side_chan.(Random.int (num_side_chan)) in
+    TS.pop r.stack <+> C.swap pop_chan
 
   let try_pop r =
-    let side_chan = C.swap r.elim_pop >>= (fun x -> constant (Some x)) in
-    TS.try_pop r.stack <+> side_chan
+    let pop_chan = snd @@ r.side_chan.(Random.int (num_side_chan)) in
+    let peek = C.swap pop_chan >>= (fun x -> constant (Some x)) in
+    TS.try_pop r.stack <+> peek
 
 end
