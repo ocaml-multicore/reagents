@@ -110,7 +110,7 @@ module Test (Q : QUEUE) = struct
     in
     let rec consume i =
       match Q.pop q with
-      | None -> printf "consumed=%d\n%!" i
+      | None -> () (* printf "consumed=%d\n%!" i *)
       | Some _ -> consume (i+1)
     in
     for i = 1 to num_doms - 1 do

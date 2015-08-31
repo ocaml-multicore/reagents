@@ -21,7 +21,7 @@ type t = int * int ref
 
 let _ = Random.self_init ()
 
-let create ?(max=16) () = (max, ref 1)
+let create ?(max=32) () = (max, ref 1)
 
 let once (maxv, r) =
   let t = Random.int (!r) in

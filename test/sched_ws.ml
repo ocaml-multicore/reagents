@@ -27,7 +27,8 @@ end
 
 module Make (S : sig val num_domains : int end) : S = struct
 
-  type 'a cont = ('a, unit) continuation
+  type queue_num = int
+  type 'a cont = ('a, unit) continuation * queue_num
 
   effect Fork     : (unit -> unit) -> unit
   effect Yield    : unit
@@ -55,7 +56,7 @@ module Make (S : sig val num_domains : int end) : S = struct
 
   let fresh_tid () = Oo.id (object end)
 
-  let enqueue_wid c dom_id = MSQueue.push (Array.get sq dom_id) c
+  let enqueue c dom_id = MSQueue.push (Array.get sq dom_id) c
 
   let rec dequeue_wid dom_id =
     let b = Backoff.create () in
@@ -67,23 +68,22 @@ module Make (S : sig val num_domains : int end) : S = struct
           else ( Backoff.once b ; loop () )
     in loop ()
   and dequeue () = dequeue_wid (Domain.self ())
-  and enqueue k = enqueue_wid k (Domain.self ())
   and spawn f (tid:int) =
     CAS.incr num_threads;
     begin
       match f () with
       | () -> (CAS.decr num_threads; dequeue ())
-      | effect (Fork f) k -> enqueue k ; spawn f (fresh_tid ())
-      | effect Yield k -> enqueue k ; dequeue ()
+      | effect (Fork f) k -> enqueue k (Domain.self ()); spawn f (fresh_tid ())
+      | effect Yield k -> enqueue k (Domain.self ()); dequeue ()
       | effect (Suspend f) k ->
-          ( match f k with
+          ( match f (k, Domain.self()) with
             | None -> dequeue ()
             | Some v -> continue k v )
-      | effect (Resume (t, v)) k -> enqueue k ; continue t v
+      | effect (Resume ((t,qid), v)) k -> enqueue k qid; continue t v
       | effect GetTid k -> continue k tid
       | effect NumDomains k -> continue k (S.num_domains)
       | effect (ForkOn (f, dom_id)) k ->
-          (enqueue_wid k dom_id; spawn f (fresh_tid ()))
+          (enqueue k dom_id; spawn f (fresh_tid ()))
     end
 
   let run_with f num_domains =
