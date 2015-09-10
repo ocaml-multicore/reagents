@@ -19,25 +19,25 @@ type 'a updt = { expect : 'a ; update : 'a }
 
 type 'a state =
   | Idle of 'a
-  | InProgress of 'a
+  | InProgress of 'a * int * t list
 
-type 'a ref = { mutable content : 'a state ;
+and 'a ref = { mutable content : 'a state ;
                         id      : int      }
+
+and t = CAS : 'a ref * 'a updt -> t
 
 let get_id {id; _} = id
 
 let compare_and_swap r x y =
-  Obj.compare_and_swap_field (Obj.repr r) 0 (Obj.repr x) (Obj.repr y)
-                             (* 0 stands for the first field *)
+  ( Obj.compare_and_swap_field (Obj.repr r) 0 (Obj.repr x) (Obj.repr y))
 
 let ref x = { content = Idle x           ;
               id      = Oo.id (object end) }
 
 let get r = match r.content with
   | Idle a -> a
-  | InProgress a -> a
+  | InProgress (a,_,_) -> a
 
-type t = CAS : 'a ref * 'a updt -> t
 
 let cas r u = CAS (r, u)
 
@@ -53,29 +53,35 @@ let commit (CAS (r, { expect ; update })) =
       else compare_and_swap r s (Idle update)
   | _ -> false
 
-let semicas (CAS (r, { expect ; _ })) =
+let rec semicas (CAS (r, { expect ; _ })) id k =
   let s = r.content in
   match s with
-  | Idle a when a == expect -> compare_and_swap r s (InProgress a)
-  | _                         -> false
+  | Idle a when a == expect -> compare_and_swap r s (InProgress (a,id,k))
+  | InProgress (_,id',k') when id' = id ->
+      if id = id' then true
+      else ( ignore (semicas_list id' k'); false )
+
+and semicas_list id = function
+  | [] -> true
+  | x::xs -> semicas x id xs
 
 (* Only the thread that performed the semicas should be able to rollbwd/fwd.
  * Hence, we don't need to CAS. *)
 let rollbwd (CAS (r, _)) =
   match r.content with
   | Idle _      -> ()
-  | InProgress x -> r.content <- Idle x
+  | InProgress (x,_,_) -> r.content <- Idle x
 
 let rollfwd (CAS (r, { update ; _ })) =
   match r.content with
   | Idle _ -> failwith "CAS.kCAS: broken invariant"
-  | InProgress x ->  r.content <- Idle update
+  | InProgress (x,_,_) ->  r.content <- Idle update
                     (* we know we have x == expect *)
 
 let kCAS l =
-  let l = List.sort (fun c1 c2 -> compare (get_cas_id c1) (get_cas_id c2)) l
-  in
-  if List.for_all (fun cas -> semicas cas) l then
+  let l = List.sort (fun c1 c2 -> compare (get_cas_id c1) (get_cas_id c2)) l in
+  let id = Oo.id (object end) in
+  if semicas_list id l then
     ( List.iter rollfwd l ; true )
   else
     ( List.iter rollbwd l ; false )
