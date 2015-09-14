@@ -36,7 +36,7 @@ module Make (Reagents: Reagents.S) : S
     {stack     : 'a TS.t;
      side_chan : (('a, unit) C.endpoint  (* elim_push *) * (unit,'a) C.endpoint (* elim_pop  *)) array }
 
-  let num_side_chan = 1
+  let num_side_chan = 64
 
   let create () =
     let side_chan = Array.init num_side_chan (fun _ -> C.mk_chan ()) in
