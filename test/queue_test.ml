@@ -86,10 +86,11 @@ module Benchmark = struct
   let benchmark f n =
     let rec run acc = function
     | 0 -> acc
-    | n -> let t1 = Sys.time () in
-          let () = f () in
-          let d = Sys.time () -. t1 in
-          run (d::acc) (n-1)
+    | n ->
+        let t1 = Unix.gettimeofday () in
+        let () = f () in
+        let d = Unix.gettimeofday () -. t1 in
+        run (d::acc) (n-1)
     in
     let r = run [] n in
     get_mean_sd r
@@ -128,17 +129,18 @@ end
 module Data = Reagents_data.Make(Reagents)
 
 let main () =
-  let module M = Test(MSQueue) in
-  let (m,sd) = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
-  printf "Hand-written MSQueue: mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m);
-
   let module M = Test(Lock_queue) in
   let (m,sd) = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
   printf "Lock_queue : mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m);
 
   let module M = Test(MakeQ(Data.MichaelScott_queue)) in
   let (m,sd) = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
-  printf "Reagent MSQueue: mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m)
+  printf "Reagent MSQueue: mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m);
+
+  let module M = Test(MSQueue) in
+  let (m,sd) = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
+  printf "Hand-written MSQueue: mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m)
+
 
 let () = S.run main
 let () = Unix.sleep 1
