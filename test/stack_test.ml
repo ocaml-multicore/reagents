@@ -79,10 +79,11 @@ module Benchmark = struct
   let benchmark f n =
     let rec run acc = function
     | 0 -> acc
-    | n -> let t1 = Sys.time () in
-          let () = f () in
-          let d = Sys.time () -. t1 in
-          run (d::acc) (n-1)
+    | n ->
+        let t1 = Unix.gettimeofday () in
+        let () = f () in
+        let d = Unix.gettimeofday () -. t1 in
+        run (d::acc) (n-1)
     in
     let r = run [] n in
     get_mean_sd r
