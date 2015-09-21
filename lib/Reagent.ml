@@ -174,14 +174,7 @@ module Make (Sched: Scheduler.S) : S
   let run r v =
     let b = Backoff.create () in
     let pause () = Backoff.once b in
-    let rec without_offer () =
-      match r.try_react v Reaction.empty None with
-      | Done res -> res
-      | Retry ->
-            ( pause ();
-              if r.may_sync then with_offer () else without_offer () )
-      | Block -> with_offer ()
-    and with_offer () =
+    let rec with_offer () =
       let offer = Offer.make () in
       match r.try_react v Reaction.empty (Some offer) with
       | Done res -> res
@@ -194,6 +187,14 @@ module Make (Sched: Scheduler.S) : S
           match Offer.rescind offer with
           | Some ans -> ans
           | None -> with_offer () )
+    in
+    let rec without_offer () =
+      match r.try_react v Reaction.empty None with
+      | Done res -> res
+      | Retry ->
+            ( pause ();
+              if r.may_sync then with_offer () else without_offer () )
+      | Block -> with_offer ()
     in
     without_offer ()
 
