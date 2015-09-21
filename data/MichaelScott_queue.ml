@@ -45,7 +45,7 @@ module Make (Reagents: Reagents.S) : S
     match s with
     | Nil -> failwith "MSQueue.pop: impossible"
     | Next (_,x) ->
-        ( match run (Ref.read x) () with
+        ( match Ref.read_imm x with
           | Nil -> None
           | Next (v,_) as n -> Some (n,v)))
 
@@ -53,16 +53,16 @@ module Make (Reagents: Reagents.S) : S
     match s with
     | Nil -> failwith "MSQueue.try_pop: impossible"
     | Next (_,x) as n ->
-        ( match run (Ref.read x) () with
+        ( match Ref.read_imm x with
           | Nil -> Some (n, None)
           | Next (v,_) as n -> Some (n, Some v)))
 
   let rec find_and_enq n tail =
-    match run (Ref.read tail) () with
+    match Ref.read_imm tail with
     | Nil -> failwith "MSQueue.push: impossible"
     | Next (_,r) as ov ->
-        let s = run (Ref.read r) () in
-        let fwd_tail nv () = ignore @@ run (attempt @@ Ref.cas tail ov nv) () in
+        let s = Ref.read_imm r in
+        let fwd_tail nv () = ignore @@ Ref.cas_imm tail ov nv in
         match s with
         | Nil -> Ref.cas r s n >> post_commit (fwd_tail n)
         | Next (_,_) as nv -> ( fwd_tail nv (); find_and_enq n tail )

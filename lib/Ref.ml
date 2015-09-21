@@ -18,10 +18,12 @@
 module type S = sig
   type 'a ref
   type ('a,'b) reagent
-  val mk_ref : 'a -> 'a ref
-  val read   : 'a ref -> (unit, 'a) reagent
-  val cas    : 'a ref -> 'a -> 'a -> (unit, unit) reagent
-  val upd    : 'a ref -> ('a -> 'b -> ('a *'c) option) -> ('b,'c) reagent
+  val mk_ref   : 'a -> 'a ref
+  val read     : 'a ref -> (unit, 'a) reagent
+  val read_imm : 'a ref -> 'a
+  val cas      : 'a ref -> 'a -> 'a -> (unit, unit) reagent
+  val cas_imm  : 'a ref -> 'a -> 'a -> bool
+  val upd      : 'a ref -> ('a -> 'b -> ('a *'c) option) -> ('b,'c) reagent
 end
 
 module Make(Sched: Scheduler.S)
@@ -62,6 +64,8 @@ module Make(Sched: Scheduler.S)
 
   let read r = read r Reagent.commit
 
+  let read_imm r = CAS.get r.data
+
   let wake_all q =
     let rec loop () =
       match MSQueue.pop q with
@@ -86,6 +90,9 @@ module Make(Sched: Scheduler.S)
         try_react }
 
   let cas r e u = cas r e u Reagent.commit
+
+  let cas_imm r expect update =
+    CAS.(commit @@ cas r.data {expect; update})
 
   let rec upd : 'a 'b 'c 'r. 'a ref -> ('a -> 'b -> ('a * 'c) option) -> ('c,'r) reagent -> ('b,'r) reagent =
     fun r f k ->

@@ -18,10 +18,12 @@
 module type S = sig
   type 'a ref
   type ('a,'b) reagent
-  val mk_ref : 'a -> 'a ref
-  val read   : 'a ref -> (unit, 'a) reagent
-  val cas    : 'a ref -> 'a -> 'a -> (unit, unit) reagent
-  val upd    : 'a ref -> ('a -> 'b -> ('a *'c) option) -> ('b,'c) reagent
+  val mk_ref   : 'a -> 'a ref
+  val read     : 'a ref -> (unit, 'a) reagent
+  val read_imm : 'a ref -> 'a
+  val cas      : 'a ref -> 'a -> 'a -> (unit, unit) reagent
+  val cas_imm  : 'a ref -> 'a -> 'a -> bool
+  val upd      : 'a ref -> ('a -> 'b -> ('a *'c) option) -> ('b,'c) reagent
 end
 
 module Make(Sched: Scheduler.S)
