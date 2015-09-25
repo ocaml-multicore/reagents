@@ -171,32 +171,34 @@ module Make (Sched: Scheduler.S) : S
   let (<*>) (r1 : ('a,'b) t) (r2 : ('a,'c) t) : ('a,'b*'c) t =
     lift (fun a -> Some (a,a)) >> first (r1) >> second (r2)
 
+  let rec with_offer pause r v =
+    let offer = Offer.make () in
+    match r.try_react v Reaction.empty (Some offer) with
+    | Done res -> res
+    | f ->
+      ( begin
+          match f with
+          | Block -> Offer.wait offer
+          | _ -> pause ()
+        end;
+        match Offer.rescind offer with
+        | Some ans -> ans
+        | None -> with_offer pause r v )
+
+  let rec without_offer pause r v =
+    match r.try_react v Reaction.empty None with
+    | Done res -> res
+    | Retry ->
+          ( pause ();
+            if r.may_sync
+            then with_offer pause r v
+            else without_offer pause r v)
+    | Block -> with_offer pause r v
+
   let run r v =
     let b = Backoff.create () in
     let pause () = Backoff.once b in
-    let rec with_offer () =
-      let offer = Offer.make () in
-      match r.try_react v Reaction.empty (Some offer) with
-      | Done res -> res
-      | f ->
-        ( begin
-            match f with
-            | Block -> Offer.wait offer
-            | _ -> pause ()
-          end;
-          match Offer.rescind offer with
-          | Some ans -> ans
-          | None -> with_offer () )
-    in
-    let rec without_offer () =
-      match r.try_react v Reaction.empty None with
-      | Done res -> res
-      | Retry ->
-            ( pause ();
-              if r.may_sync then with_offer () else without_offer () )
-      | Block -> with_offer ()
-    in
-    without_offer ()
+    without_offer pause r v
 
   let can_cas_immediate k rx = function
     | Some _ -> false

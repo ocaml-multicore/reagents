@@ -34,6 +34,14 @@ let create () =
   let head = (Next (Obj.magic (), ref Nil)) in
   { head = ref head ; tail = ref head }
 
+let is_empty q =
+  match !(q.head) with
+  | Nil -> failwith "MSQueue.is_empty: impossible"
+  | Next (_,x) ->
+      ( match !x with
+        | Nil -> true
+        | _ -> false )
+
 let pop q =
   let b = Backoff.create () in
   let rec loop () =
