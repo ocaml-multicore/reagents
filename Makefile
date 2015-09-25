@@ -24,5 +24,5 @@ bench:
 
 clean:
 	ocamlbuild -clean
-	rm -f *.prof *.dump
+	rm -f *.preprof *.prof *.dump
 	find . -name "*~" | xargs rm -f
