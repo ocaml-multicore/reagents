@@ -18,10 +18,12 @@
 module type S = sig
   type 'a ref
   type ('a,'b) reagent
-  val mk_ref : 'a -> 'a ref
-  val read   : 'a ref -> (unit, 'a) reagent
-  val cas    : 'a ref -> 'a -> 'a -> (unit, unit) reagent
-  val upd    : 'a ref -> ('a -> 'b -> ('a *'c) option) -> ('b,'c) reagent
+  val mk_ref   : 'a -> 'a ref
+  val read     : 'a ref -> (unit, 'a) reagent
+  val read_imm : 'a ref -> 'a
+  val cas      : 'a ref -> 'a -> 'a -> (unit, unit) reagent
+  val cas_imm  : 'a ref -> 'a -> 'a -> bool
+  val upd      : 'a ref -> ('a -> 'b -> ('a *'c) option) -> ('b,'c) reagent
 end
 
 module Make(Sched: Scheduler.S)
@@ -62,6 +64,8 @@ module Make(Sched: Scheduler.S)
 
   let read r = read r Reagent.commit
 
+  let read_imm r = CAS.get r.data
+
   let wake_all q =
     let rec loop () =
       match MSQueue.pop q with
@@ -87,33 +91,36 @@ module Make(Sched: Scheduler.S)
 
   let cas r e u = cas r e u Reagent.commit
 
+  let cas_imm r expect update =
+    CAS.(commit @@ cas r.data {expect; update})
+
   let rec upd : 'a 'b 'c 'r. 'a ref -> ('a -> 'b -> ('a * 'c) option) -> ('c,'r) reagent -> ('b,'r) reagent =
+    let try_react r f k b rx o =
+      if can_cas_immediate k rx o then
+        let ov = CAS.get r.data in
+        match f ov b with
+        | None -> Block
+        | Some (nv, c) ->
+            if r.data <!= ov --> nv then
+              ( wake_all r.offers; k.try_react c rx o )
+            else Retry
+      else
+        let () = match o with
+          | None -> ()
+          | Some ov -> MSQueue.push r.offers (Offer ov)
+        in
+        let ov = CAS.get r.data in
+        match f ov b with
+        | None -> Block
+        | Some (nv, c) ->
+            let cas = PostCommitCAS.cas r.data ov nv (fun () -> wake_all r.offers) in
+            k.try_react c (Reaction.with_CAS rx cas) o
+    in
     fun r f k ->
-      let try_react b rx o =
-        if can_cas_immediate k rx o then
-          let ov = CAS.get r.data in
-          match f ov b with
-          | None -> Block
-          | Some (nv, c) ->
-              if r.data <!= ov --> nv then
-                ( wake_all r.offers; k.try_react c rx o )
-              else Retry
-        else
-          let () = match o with
-            | None -> ()
-            | Some ov -> MSQueue.push r.offers (Offer ov)
-          in
-          let ov = CAS.get r.data in
-          match f ov b with
-          | None -> Block
-          | Some (nv, c) ->
-              let cas = PostCommitCAS.cas r.data ov nv (fun () -> wake_all r.offers) in
-              k.try_react c (Reaction.with_CAS rx cas) o
-      in
       { always_commits = false;
         may_sync = k.may_sync;
         compose = (fun next -> upd r f (k.compose next));
-        try_react }
+        try_react = try_react r f k}
 
   let upd r f = upd r f Reagent.commit
 end

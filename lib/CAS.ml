@@ -56,9 +56,13 @@ let commit (CAS (r, { expect ; update })) =
 let rec semicas (CAS (r, { expect ; _ })) id k =
   let s = r.content in
   match s with
-  | Idle a when a == expect -> compare_and_swap r s (InProgress (a,id,k))
-  | InProgress (_,id',k') when id' = id ->
-      if id = id' then true
+  | Idle a ->
+      if a == expect then
+        compare_and_swap r s (InProgress (a,id,k))
+      else false
+  | InProgress (_,id',k') ->
+      if id = id'
+      then false (* Multiple compare and swaps on the same location. *)
       else ( ignore (semicas_list id' k'); false )
 
 and semicas_list id = function
