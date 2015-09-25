@@ -74,20 +74,20 @@ module Make(Sched: Scheduler.S)
     in loop ()
 
   let rec cas : 'a 'r. 'a ref -> 'a -> 'a -> (unit, 'r) reagent -> (unit,'r) reagent =
+    let try_react r expect update k () rx o =
+      if can_cas_immediate k rx o then
+        if r.data <!= expect --> update then
+          ( wake_all r.offers; k.try_react () rx o )
+        else Retry
+      else
+        let c = PostCommitCAS.cas r.data expect update (fun () -> wake_all r.offers) in
+        k.try_react () (Reaction.with_CAS rx c) o
+    in
     fun r expect update k ->
-      let try_react () rx o =
-        if can_cas_immediate k rx o then
-          if r.data <!= expect --> update then
-            ( wake_all r.offers; k.try_react () rx o )
-          else Retry
-        else
-          let cas = PostCommitCAS.cas r.data expect update (fun () -> wake_all r.offers) in
-          k.try_react () (Reaction.with_CAS rx cas) o
-      in
       { always_commits = false;
         may_sync = k.may_sync;
         compose = (fun next -> cas r expect update (k.compose next));
-        try_react }
+        try_react = try_react r expect update k}
 
   let cas r e u = cas r e u Reagent.commit
 
