@@ -61,15 +61,15 @@ module Make (Sched: Scheduler.S) : S with type 'a offer = 'a Offer.Make(Sched).t
       post_commits = r1.post_commits @ r2.post_commits }
 
   let try_commit r =
-    let success = match r.cases with
-      | [] -> Some (fun () -> ())
-      | [cas] -> PostCommitCAS.commit cas
-      | l -> PostCommitCAS.kCAS l
+    let do_post_commit r = function
+      | None -> false
+      | Some pc ->
+          (pc ();
+            List.iter (fun f -> f ()) r.post_commits;
+            true)
     in
-    match success with
-    | None -> false
-    | Some pc ->
-      ( pc ();
-        List.iter (fun f -> f ()) r.post_commits;
-        true)
+    match r.cases with
+    | [] -> true
+    | [cas] -> do_post_commit r @@ PostCommitCAS.commit cas
+    | l -> do_post_commit r @@ PostCommitCAS.kCAS l
 end
