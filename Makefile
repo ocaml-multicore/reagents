@@ -3,7 +3,8 @@ TEST=test/swap_test.byte test/ref_test.byte test/counter_test.byte \
 BENCH=test/reagent_queue.byte test/hw_queue.byte test/eli_stack.byte \
 			test/trieber_stack.byte
 FLAGS=-Is lib,data,sync -lib unix
-BFLAGS=-cflag -annot -cflag -g -lflag -g $(FLAGS)
+BCFLAGS=-ocamlc ocamlcp -cflag -annot -cflag -g -lflag -g $(FLAGS)
+BAFLAGS=-cflag -annot -cflag -g -lflag -g $(FLAGS)
 
 all: reagents data sync tests
 
@@ -19,8 +20,12 @@ sync: reagents
 tests:
 	ocamlbuild $(FLAGS) $(TEST)
 
-bench:
-	ocamlbuild $(BFLAGS) $(BENCH)
+bench-alloc:
+	ocamlbuild $(BAFLAGS) $(BENCH)
+
+bench-count:
+	ocamlbuild $(BCFLAGS) $(BENCH)
+
 
 clean:
 	ocamlbuild -clean
