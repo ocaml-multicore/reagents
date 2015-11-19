@@ -108,7 +108,8 @@ module Make (Sched : Scheduler.S) : S with
           | _ -> ()
         end;
         MSQueue.clean_until incoming message_is_active;
-        try_from (MSQueue.snapshot incoming) false )
+        if MSQueue.is_empty incoming then Block
+        else try_from (MSQueue.snapshot incoming) false )
     in
     fun ep k ->
       { always_commits = false;

@@ -53,21 +53,22 @@ let commit (CAS (r, { expect ; update })) =
       else compare_and_swap r s (Idle update)
   | _ -> false
 
-let rec semicas (CAS (r, { expect ; _ })) id k =
-  let s = r.content in
-  match s with
-  | Idle a ->
-      if a == expect then
-        compare_and_swap r s (InProgress (a,id,k))
-      else false
-  | InProgress (_,id',k') ->
-      if id = id'
-      then false (* Multiple compare and swaps on the same location. *)
-      else ( ignore (semicas_list id' k'); false )
-
-and semicas_list id = function
+let rec semicas id = function
   | [] -> true
-  | x::xs -> semicas x id xs
+  | (CAS (r, { expect ; _ }))::xs ->
+      let s = r.content in
+      match s with
+      | Idle a ->
+          if a == expect then
+            if compare_and_swap r s (InProgress (a,id,xs)) then
+              semicas id xs (* continue with the rest of the CASes *)
+            else false (* CAS has failed *)
+          else false (* CAS will fail *)
+      | InProgress (_,id',k') ->
+          if id = id'
+          then false (* Multiple compare and swaps on the same location. *)
+          else (* Race lost! Help complete the victorious thread's kCAS *)
+            ( ignore (semicas id' k'); false )
 
 (* Only the thread that performed the semicas should be able to rollbwd/fwd.
  * Hence, we don't need to CAS. *)
@@ -85,7 +86,7 @@ let rollfwd (CAS (r, { update ; _ })) =
 let kCAS l =
   let l = List.sort (fun c1 c2 -> compare (get_cas_id c1) (get_cas_id c2)) l in
   let id = Oo.id (object end) in
-  if semicas_list id l then
+  if semicas id l then
     ( List.iter rollfwd l ; true )
   else
     ( List.iter rollbwd l ; false )
