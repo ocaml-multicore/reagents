@@ -14,6 +14,13 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
+module type Scheduler = sig
+  type 'a cont
+  val suspend : ('a cont -> 'a option) -> 'a
+  val resume  : 'a cont -> 'a -> unit
+  val get_tid : unit -> int
+end
+
 module type S = sig
   type ('a,'b) t
   val never       : ('a,'b) t
@@ -33,7 +40,7 @@ module type S = sig
   module Channel : Channel.S with type ('a,'b) reagent = ('a,'b) t
 end
 
-module Make (Sched: Scheduler.S) : S = struct
+module Make (Sched: Scheduler) : S = struct
   include Reagent.Make(Sched)
   module Ref = Ref.Make(Sched)
   module Channel = Channel.Make(Sched)
