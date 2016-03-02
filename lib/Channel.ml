@@ -82,7 +82,7 @@ module Make (Sched : Scheduler.S) : S with
       (* Search for matching offers *)
       let rec try_from cursor retry =
         match MSQueue.next cursor with
-        | None -> if (retry) then Retry else Block
+        | None -> if retry then Retry else Block
         | Some (Message (sender_offer,exchange), cursor) ->
             let same_offer o = function
             | None -> false
@@ -97,7 +97,7 @@ module Make (Sched : Scheduler.S) : S with
                 let merged = exchange.compose k in
                 match merged.try_react a new_rx offer with
                 | Retry -> try_from cursor true
-                | Block -> try_from cursor retry
+                | Block | BlockAndRetry -> try_from cursor retry
                 | v -> v )
       in
       ( begin
