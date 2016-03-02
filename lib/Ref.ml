@@ -58,7 +58,6 @@ module Make(Sched: Scheduler.S)
         k.try_react v rx o
       in
         { always_commits = k.always_commits;
-          may_sync = k.may_sync;
           compose = (fun next -> read r (k.compose next));
           try_react }
 
@@ -85,7 +84,6 @@ module Make(Sched: Scheduler.S)
     in
     fun r expect update k ->
       { always_commits = false;
-        may_sync = k.may_sync;
         compose = (fun next -> cas r expect update (k.compose next));
         try_react = try_react r expect update k}
 
@@ -118,7 +116,6 @@ module Make(Sched: Scheduler.S)
     in
     fun r f k ->
       { always_commits = false;
-        may_sync = k.may_sync;
         compose = (fun next -> upd r f (k.compose next));
         try_react = try_react r f k}
 

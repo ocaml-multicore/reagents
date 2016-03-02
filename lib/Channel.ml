@@ -56,7 +56,6 @@ module Make (Sched : Scheduler.S) : S with
     let rec complete_exchange : 'd. (a,'d) t -> (c,'d) t =
       fun receiver_k ->
         { always_commits = false;
-          may_sync = receiver_k.may_sync;
           compose = (fun next -> complete_exchange (receiver_k.compose next));
           try_react = try_react payload sender_offer sender_rx receiver_k}
     in
@@ -113,7 +112,6 @@ module Make (Sched : Scheduler.S) : S with
     in
     fun ep k ->
       { always_commits = false;
-        may_sync = true;
         compose = (fun next -> swap ep (k.compose next));
         try_react = try_react ep k}
 

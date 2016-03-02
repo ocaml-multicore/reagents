@@ -19,12 +19,11 @@ module type S = sig
 
   type reaction
   type 'a offer
-  type 'a result = Block | Retry | Done of 'a
+  type 'a result = BlockAndRetry | Block | Retry | Done of 'a
   type ('a,'b) t =
     { try_react : 'a -> reaction -> 'b offer option -> 'b result;
       compose : 'r. ('b,'r) t -> ('a,'r) t;
-      always_commits : bool;
-      may_sync : bool }
+      always_commits : bool }
 
   val never       : ('a,'b) t
   val constant    : 'a -> ('b,'a) t
