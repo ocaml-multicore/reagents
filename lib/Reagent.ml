@@ -18,12 +18,11 @@
 module type S = sig
   type reaction
   type 'a offer
-  type 'a result = Block | Retry | Done of 'a
+  type 'a result = BlockAndRetry | Block | Retry | Done of 'a
   type ('a,'b) t =
     { try_react : 'a -> reaction -> 'b offer option -> 'b result;
       compose : 'r. ('b,'r) t -> ('a,'r) t;
-      always_commits : bool;
-      may_sync : bool }
+      always_commits : bool }
 
   val never       : ('a,'b) t
   val constant    : 'a -> ('b,'a) t
@@ -52,19 +51,18 @@ module Make (Sched: Scheduler.S) : S
   type reaction = Reaction.t
   type 'a offer = 'a Offer.t
 
-  type 'a result = Block | Retry | Done of 'a
+  type 'a result = BlockAndRetry | Block | Retry | Done of 'a
 
   type ('a,'b) t =
     { try_react : 'a -> Reaction.t -> 'b Offer.t option -> 'b result;
       compose : 'r. ('b,'r) t -> ('a,'r) t;
-      always_commits : bool;
-      may_sync : bool }
+      always_commits : bool }
+
 
   let (>>) r1 r2 = r1.compose r2
 
   let rec never : 'a 'b. ('a,'b) t =
     { try_react = (fun _ _ _ -> Block);
-      may_sync = false;
       always_commits = false;
       compose = fun _ -> never }
 
@@ -79,7 +77,6 @@ module Make (Sched: Scheduler.S) : S
           | Some a' -> Done a'
     in
     { always_commits = true;
-      may_sync = false;
       compose = (fun next -> next);
       try_react }
 
@@ -89,13 +86,13 @@ module Make (Sched: Scheduler.S) : S
 
   let rec mk_reagent : 'a 'b 'r. ('a,'b) mkr_info -> ('b,'r) t -> ('a,'r) t =
     fun m k ->
-      { may_sync = k.may_sync;
-        always_commits = k.always_commits;
+      { always_commits = k.always_commits;
         try_react = (fun a rx o ->
           match m.ret_val a with
           | Done b -> k.try_react b (m.new_rx a rx) o
+          | Retry -> Retry
           | Block -> Block
-          | Retry -> Retry);
+          | BlockAndRetry -> BlockAndRetry);
         compose = (fun next -> mk_reagent m (k.compose next)) }
 
   let constant (x : 'a) : ('b,'a) t =
@@ -116,8 +113,7 @@ module Make (Sched: Scheduler.S) : S
 
   let rec computed : 'a 'b 'r. ('a -> (unit, 'b) t) -> ('b, 'r) t -> ('a, 'r) t =
     fun f k ->
-      { may_sync = true;
-        always_commits = false;
+      { always_commits = false;
         compose = (fun next -> computed f (k.compose next));
         try_react = (fun a rx o -> ((f a).compose k).try_react () rx o) }
 
@@ -128,16 +124,28 @@ module Make (Sched: Scheduler.S) : S
   let rec choose : 'a 'b 'r. ('a,'b) t -> ('a,'b) t -> ('a,'b) t =
     fun r1 r2 ->
       { always_commits = r1.always_commits && r1.always_commits;
-        may_sync = r1.may_sync || r2.may_sync;
         compose = (fun next -> choose (r1.compose next) (r2.compose next));
         try_react = fun a rx offer ->
           match r1.try_react a rx offer with
           | (Done _) as v -> v
-          | Block -> r2.try_react a rx offer
-          | Retry ->
+          | Block ->
+              begin
                 match r2.try_react a rx offer with
-                | Block | Retry -> Retry
-                | v -> v }
+                | Retry -> BlockAndRetry
+                | v -> v
+              end
+          | Retry ->
+              begin
+                match r2.try_react a rx offer with
+                | Block -> BlockAndRetry
+                | v -> v
+              end
+          | BlockAndRetry ->
+              begin
+                match r2.try_react a rx offer with
+                | Retry | Block -> BlockAndRetry
+                | v -> v
+              end}
 
   let attempt (r : ('a,'b) t) : ('a,'b option) t =
     choose (r >> lift (fun x -> Some (Some x))) (constant None)
@@ -149,8 +157,7 @@ module Make (Sched: Scheduler.S) : S
       let try_react (a,c) rx offer =
         (r >> lift (fun b -> Some (b, c)) >> k).try_react a rx offer
       in
-      { may_sync = r.may_sync || k.may_sync;
-        always_commits = r.always_commits && k.always_commits;
+      { always_commits = r.always_commits && k.always_commits;
         compose = (fun next -> first r (k.compose next));
         try_react }
 
@@ -161,8 +168,7 @@ module Make (Sched: Scheduler.S) : S
       let try_react (c,a) rx offer =
         (r >> lift (fun b -> Some (c, b)) >> k).try_react a rx offer
       in
-      { may_sync = r.may_sync || k.may_sync;
-        always_commits = r.always_commits && k.always_commits;
+      { always_commits = r.always_commits && k.always_commits;
         compose = (fun next -> second r (k.compose next));
         try_react }
 
@@ -190,9 +196,10 @@ module Make (Sched: Scheduler.S) : S
     | Done res -> res
     | Retry ->
           ( pause ();
-            if r.may_sync
-            then with_offer pause r v
-            else without_offer pause r v)
+            without_offer pause r v )
+    | BlockAndRetry ->
+          ( pause ();
+            with_offer pause r v )
     | Block -> with_offer pause r v
 
   let run r v =
