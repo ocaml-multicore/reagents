@@ -1,7 +1,7 @@
-TEST=test/swap_test.byte test/ref_test.byte test/counter_test.byte \
-		 test/queue_test.byte test/stack_test.byte test/lock_test.byte
-BENCH=test/reagent_queue.byte test/hw_queue.byte test/eli_stack.byte \
-			test/trieber_stack.byte
+TEST=test/swap_test.native test/ref_test.native test/counter_test.native \
+		 test/queue_test.native test/stack_test.native test/lock_test.native
+BENCH=test/reagent_queue.native test/hw_queue.native test/eli_stack.native \
+			test/trieber_stack.native
 FLAGS=-Is lib,data,sync -lib unix
 BCFLAGS=-ocamlc ocamlcp -cflag -annot -cflag -g -lflag -g $(FLAGS)
 BAFLAGS=-cflag -annot -cflag -g -lflag -g $(FLAGS)

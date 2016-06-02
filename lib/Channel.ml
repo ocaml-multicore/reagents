@@ -102,7 +102,7 @@ module Make (Sched : Scheduler.S) : S with
       in
       ( begin
           match offer with
-          | Some offer (* when (not k.may_sync) *)->
+          | Some offer (* when (not k.may_sync) *) ->
               MSQueue.push outgoing (mk_message a rx k offer)
           | _ -> ()
         end;

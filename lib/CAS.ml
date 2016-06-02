@@ -38,7 +38,6 @@ let get r = match r.content with
   | Idle a -> a
   | InProgress (a,_,_) -> a
 
-
 let cas r u = CAS (r, u)
 
 let is_on_ref (CAS (r1, _)) r2 = r1.id == r2.id
