@@ -29,6 +29,11 @@ let (num_doms, num_items) =
     with
     | Failure _ -> print_usage_and_exit ()
 
+let () =
+  if num_doms mod 2 <> 0 then
+    (print_endline @@ "<num_domains> must be multiple of 2";
+     exit 0)
+
 let items_per_dom = num_items / num_doms
 
 let () = Printf.printf "[%d] items_per_domain = %d\n%!" (Domain.self ()) items_per_dom
@@ -116,12 +121,12 @@ module Test (Q : QUEUE) = struct
     in
     for i = 1 to num_doms - 1 do
       S.fork_on (fun () ->
-        produce items_per_domain;
-        consume 0;
+        if i mod 2 == 0
+        then produce items_per_domain
+        else consume 0;
         run (CDL.count_down b) ()) i
     done;
     produce items_per_domain;
-    consume 0;
     run (CDL.count_down b) ();
     run (CDL.await b) ()
 end
@@ -143,4 +148,3 @@ let main () =
 
 
 let () = S.run main
-let () = Unix.sleep 1

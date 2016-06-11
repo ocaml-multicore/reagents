@@ -33,6 +33,7 @@ let () =
   if num_doms mod 2 <> 0 then
     (print_endline @@ "<num_domains> must be multiple of 2";
      exit 0)
+
 let items_per_dom = num_items / num_doms
 
 let () = Printf.printf "items_per_domain = %d\n%!" items_per_dom
@@ -84,6 +85,7 @@ module Benchmark = struct
     let rec run acc = function
     | 0 -> acc
     | n ->
+        Gc.full_major();
         let t1 = Unix.gettimeofday () in
         let () = f () in
         let d = Unix.gettimeofday () -. t1 in
@@ -151,6 +153,11 @@ module Channel_stack : STACK = struct
 end
 
 let main () =
+  let module M = Test(MSQueue) in
+  let (m,sd) = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
+  printf "Hand-written Treiber Stack: mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m);
+
+  Gc.full_major();
   let module M = Test(MakeS(Data.Treiber_stack)) in
   let (m,sd) = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
   printf "Treiber stack: mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m);
@@ -171,4 +178,3 @@ let main () =
   printf "Channel-based stack: mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m)
 
 let () = S.run main
-let () = Unix.sleep 1
