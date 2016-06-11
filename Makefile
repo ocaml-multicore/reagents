@@ -27,7 +27,6 @@ bench-alloc:
 bench-count:
 	ocamlbuild $(BCFLAGS) $(BENCH)
 
-
 clean:
 	ocamlbuild -clean
 	rm -f *.preprof *.prof *.dump

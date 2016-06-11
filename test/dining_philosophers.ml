@@ -58,7 +58,9 @@ let eat l_fork r_fork i j =
   ignore @@ run (take l_fork <*> take r_fork) ();
   printf "Philosopher %d eating in round %d\n%!" i j;
   S.fork @@ run (drop l_fork);
-  S.fork @@ run (drop r_fork)
+  if j == num_rounds
+  then S.fork @@ run (drop r_fork)
+  else run (drop r_fork) ()
 
 let main () =
   let b = CDL.create num_philosophers in
@@ -71,6 +73,7 @@ let main () =
     for j = 1 to num_rounds do
       eat l_fork r_fork i j
     done;
+    printf "[%d] done\n%!" (Domain.self());
     run (CDL.count_down b) ()
   in
 
@@ -78,10 +81,7 @@ let main () =
     S.fork_on i (work i)
   done;
   work 0 ();
-  run (CDL.count_down b) ();
   run (CDL.await b) ();
-  printf "waiting for all threads to flush output..\n%!";
-  Unix.sleep 1;
   exit 0
 
 let _ = S.run main
