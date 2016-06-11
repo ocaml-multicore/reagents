@@ -1,5 +1,6 @@
 (*
  * Copyright (c) 2015, Théo Laurent <theo.laurent@ens.fr>
+ * Copyright (c) 2015-2016, KC Sivaramakrishnan <kc@kcsrk.info>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
