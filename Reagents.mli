@@ -36,6 +36,7 @@ module type S = sig
   val (<*>)       : ('a,'b) t -> ('a,'c) t -> ('a, 'b * 'c) t
   val attempt     : ('a,'b) t -> ('a, 'b option) t
   val run         : ('a,'b) t -> 'a -> 'b
+  val get_tid     : unit -> int
 
   module Ref : Ref.S with type ('a,'b) reagent = ('a,'b) t
   module Channel : Channel.S with type ('a,'b) reagent = ('a,'b) t
