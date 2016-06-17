@@ -4,9 +4,9 @@ module type S = sig
 
   val create  : unit -> t
   val acq     : t -> (unit, unit) reagent
-  (** [rel l] returns [false] if the lock is either not held or held by another thread  *)
+  (** [run (rel l) ()] returns [false] if the lock is either not held or held by another thread  *)
   val rel     : t -> (unit, bool) reagent
-  (** [try_acq l] returns [true] if the lock was successful *)
+  (** [run (try_acq l) ()] returns [true] if the lock was successful *)
   val try_acq : t -> (unit, bool) reagent
 end
 
