@@ -21,6 +21,10 @@ module type Scheduler = sig
   val get_tid : unit -> int
 end
 
+module type GetId = sig
+  val get_tid : unit -> int
+end
+
 module type S = sig
   type ('a,'b) t
   val never       : ('a,'b) t
@@ -38,10 +42,12 @@ module type S = sig
 
   module Ref : Ref.S with type ('a,'b) reagent = ('a,'b) t
   module Channel : Channel.S with type ('a,'b) reagent = ('a,'b) t
+  module GetId : GetId
 end
 
 module Make (Sched: Scheduler) : S = struct
   include Reagent.Make(Sched)
   module Ref = Ref.Make(Sched)
   module Channel = Channel.Make(Sched)
+  module GetId : GetId = Sched
 end
