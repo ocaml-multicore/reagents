@@ -3,14 +3,12 @@ module type S = sig
   type t
 
   val create  : unit -> t
-  val acq     : t -> unit
+  val acq     : t -> (unit, unit) reagent
   (** [rel l] returns [false] if the lock is either not held or held by another thread  *)
-  val rel     : t -> bool
+  val rel     : t -> (unit, bool) reagent
   (** [try_acq l] returns [true] if the lock was successful *)
-  val try_acq : t -> bool
+  val try_acq : t -> (unit, bool) reagent
 end
-
-let is_none n = match n with None -> true | Some _ -> false
 
 module Make (Reagents: Reagents.S) : S
   with type ('a,'b) reagent = ('a,'b) Reagents.t = struct
@@ -19,82 +17,57 @@ module Make (Reagents: Reagents.S) : S
 
   open Reagents
 
-  module CV = Condition_variable.Make(Reagents)
-  module Lock = Lock.Make(Reagents)
-  module R_data = Reagents_data.Make(Reagents)
-  module Count = R_data.Counter
+  type thread_id = int
+  type count = int
 
-  type owner = int option ref
+  (** A recursive lock is either recursively locked [count] times by [thread_id] or unlocked *)
+  type status = Locked of thread_id * count | Unlocked
 
-  (** A recursive lock is a lock, a condition variable, an owner, and a counter *)
-  type t = Lock.t * CV.t * owner * Count.t
+  type t = status Ref.ref
 
-  let create () = (Lock.create (), CV.create (), ref None, Count.create 0)
+  let create () = Ref.mk_ref Unlocked
 
-  let acq (l, cv, o, c) =
+  let acq r = Ref.upd r (fun s () ->
     let tid = Reagents.get_tid () in
-    run (Lock.acq l) () ;
-    (match !o with
-     | Some co ->
-        if co <> tid then
-          begin
-            (* Not the owner, wait until there is no owner *)
-            while (not (is_none !o)) do ignore (CV.wait l cv) done ;
-            o := Some tid
-          end
-     | None ->
-        (* No current owner, take the lock *)
-        o := Some tid) ;
-    ignore (run (Count.inc c) ()) ;
-    ignore (run (Lock.rel l) ())
+    match s with
+    | Unlocked ->
+       (* No current owner, take the lock *)
+       Some (Locked (tid, 1), ())
+    | Locked (owner, count) ->
+       begin
+         if owner = tid then
+           Some (Locked (tid, count + 1), ())
+         else
+           None
+       end)
 
-  let rel (l, cv, o, c) =
+  let rel r = Ref.upd r (fun s () ->
     let tid = Reagents.get_tid () in
-    run (Lock.acq l) () ;
-    let res =
-      (match !o with
-       | Some co ->
-          if co = tid then
-            begin
-              ignore (run (Count.dec c) ()) ;
-              (* Counter is 0 when rel is called the same amount of times as acq *)
-              if (run (Count.get c) () = 0) then
-                begin
-                  (* Release ownership and notify one waiting thread *)
-                  o := None ;
-                  CV.signal cv
-                end ;
-              true
-            end
-          else
-            (* Not the owner, don't release *)
-            false
-       | None ->
-          (* No current owner, don't release *)
-          false) in
-    ignore (run (Lock.rel l) ()) ;
-    res
+    match s with
+    | Unlocked -> Some (Unlocked, false)
+    | Locked (owner, count) ->
+       begin
+         if owner = tid then
+           let new_count = count - 1 in
+           if new_count = 0 then
+             Some (Unlocked, true)
+           else
+             Some (Locked (tid, new_count), true)
+         else
+           Some (Locked (owner, count), false)
+       end)
 
-
-  let try_acq (l, cv, o, c) =
+  let try_acq r = Ref.upd r (fun s () ->
     let tid = Reagents.get_tid () in
-    run (Lock.acq l) () ;
-    let res =
-      (match !o with
-       | Some co ->
-          if co = tid then
-            (* Already the owner, increase lock count *)
-            (ignore (run (Count.inc c) ()) ; true)
-          else
-            (* Not the owner, don't wait on lock *)
-            false
-       | None ->
-          begin
-            (* No current owner, take the lock *)
-            o := Some tid ;
-            ignore (run (Count.inc c) ()) ;
-            true
-          end) in
-    ignore (run (Lock.rel l) ()) ;
-    res
+    match s with
+    | Unlocked -> Some (Locked (tid, 1), true)
+    | Locked (owner, count) ->
+       begin
+         if owner = tid then
+           (* Already the owner, increase lock count *)
+           Some (Locked (tid, count + 1), true)
+         else
+           (* Not the owner, don't wait on lock *)
+           Some (Locked (owner, count), false)
+       end)
 end

@@ -6,7 +6,6 @@ open Reagents
 
 module Sync = Reagents_sync.Make(Reagents)
 module RLock = Sync.Recursive_lock
-module CV = Sync.Condition_variable
 module CDL = Sync.Countdown_latch
 
 let rec lock_and_call l i = RLock.acq l ; callback l i ; ignore (RLock.rel l)
@@ -16,9 +15,9 @@ let main () =
   let l = RLock.create () in
 
   fork_on 2 (fun () ->
-      RLock.acq l ;
+      run (RLock.acq l) () ;
       lock_and_call l 1 ;
-      ignore (RLock.rel l)) ;
+      ignore (run (RLock.rel l) ())) ;
 
   let cdl = CDL.create (100 + (100 * 2)) in
   (* ... *)
@@ -27,15 +26,15 @@ let main () =
   done ;
   (* ... *)
   for i = 0 to 99 do
-    fork_on (i mod 4) (fun () -> RLock.acq l ;
-                         if RLock.try_acq l
-                         then RLock.rel l
+    fork_on (i mod 4) (fun () -> run (RLock.acq l) () ;
+                         if run (RLock.try_acq l) ()
+                         then run (RLock.rel l) ()
                          else assert false ;
-                         RLock.rel l ;
+                         run (RLock.rel l) () ;
                          run (CDL.count_down cdl) ()) ;
-    fork_on (i mod 4) (fun () -> if RLock.try_acq l then
+    fork_on (i mod 4) (fun () -> if run (RLock.try_acq l) () then
                                    (lock_and_call l 100 ;
-                                    ignore (RLock.rel l)) ;
+                                    ignore (run (RLock.rel l) ())) ;
                                  run (CDL.count_down cdl) ())
   done ;
 
