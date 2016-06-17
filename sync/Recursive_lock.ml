@@ -34,27 +34,20 @@ module Make (Reagents: Reagents.S) : S
     run (Lock.acq l) () ;
     (match !o with
      | Some co -> if co <> (GetId.get_tid ()) then
-                    (ignore (while (not @@ is_none !o) do assert (CV.wait l cv) done) ;
-                     assert (is_none !o) ;
-                     assert (run (Count.get c) () = 0) ;
+                    (ignore (while (not @@ is_none !o) do CV.wait l cv done) ;
                      o := Some (GetId.get_tid ()))
-     | None -> (assert (run (Count.get c) () = 0) ;
-                o := Some (GetId.get_tid ()))) ;
+     | None -> o := Some (GetId.get_tid ())) ;
     ignore @@ run (Count.inc c) () ;
     ignore @@ run (Lock.rel l) ()
 
   let rel (l, cv, o, c) =
     run (Lock.acq l) () ;
-    (match !o with
-     | Some co -> assert ((GetId.get_tid ()) = co)
-     | None -> ()) ;
     ignore @@ run (Count.dec c) () ;
-    assert (run (Count.get c) () >= 0) ;
     if (run (Count.get c) () = 0) then begin
         o := None ;
         CV.signal cv
       end ;
-    ignore (assert (run (Lock.rel l) ())) ;
+    ignore (run (Lock.rel l) ()) ;
     ()
 
 
@@ -66,11 +59,10 @@ module Make (Reagents: Reagents.S) : S
                     else false
        | None ->
           begin
-            assert (run (Count.get c) () = 0) ;
             o := Some (GetId.get_tid ()) ;
             ignore @@ run (Count.inc c) () ;
             true
           end) in
-    ignore (assert (run (Lock.rel l) ())) ;
+    ignore (run (Lock.rel l) ()) ;
     res
 end
