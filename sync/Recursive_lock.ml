@@ -22,7 +22,6 @@ module Make (Reagents: Reagents.S) : S
   module Lock = Lock.Make(Reagents)
   module R_data = Reagents_data.Make(Reagents)
   module Count = R_data.Counter
-  module GetId = Reagents.GetId
 
   type owner = int option ref
 
@@ -35,15 +34,15 @@ module Make (Reagents: Reagents.S) : S
     run (Lock.acq l) () ;
     (match !o with
      | Some co ->
-        if co <> (GetId.get_tid ()) then
+        if co <> (Reagents.get_tid ()) then
           begin
             (* Not the owner, wait until there is no owner *)
             while (not (is_none !o)) do ignore (CV.wait l cv) done ;
-            o := Some (GetId.get_tid ())
+            o := Some (Reagents.get_tid ())
           end
      | None ->
         (* No current owner, take the lock *)
-        (o := Some (GetId.get_tid ()))) ;
+        (o := Some (Reagents.get_tid ()))) ;
     ignore (run (Count.inc c) ()) ;
     ignore (run (Lock.rel l) ())
 
@@ -66,7 +65,7 @@ module Make (Reagents: Reagents.S) : S
     let res =
       (match !o with
        | Some co ->
-          if co = (GetId.get_tid ())
+          if co = (Reagents.get_tid ())
           then
             (* Already the owner, increase lock count *)
             (ignore (run (Count.inc c) ()) ; true)
@@ -76,7 +75,7 @@ module Make (Reagents: Reagents.S) : S
        | None ->
           begin
             (* No current oner, take the lock *)
-            o := Some (GetId.get_tid ()) ;
+            o := Some (Reagents.get_tid ()) ;
             ignore (run (Count.inc c) ()) ;
             true
           end) in
