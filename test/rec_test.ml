@@ -9,8 +9,8 @@ module RLock = Sync.Recursive_lock
 module CV = Sync.Condition_variable
 module CDL = Sync.Countdown_latch
 
-let rec lock_and_call l i = RLock.acq l ; callback l i ; RLock.rel l
-and callback l i = if i > 0 then lock_and_call l (i - 1) else ()
+let rec lock_and_call l i = RLock.acq l ; callback l i ; ignore (RLock.rel l)
+and callback l i = if i > 0 then lock_and_call l (i - 1)
 
 let main () =
   let l = RLock.create () in
@@ -18,7 +18,7 @@ let main () =
   fork_on 2 (fun () ->
       RLock.acq l ;
       lock_and_call l 1 ;
-      RLock.rel l) ;
+      ignore (RLock.rel l)) ;
 
   let cdl = CDL.create (100 + (100 * 2)) in
   (* ... *)
@@ -35,9 +35,7 @@ let main () =
                          run (CDL.count_down cdl) ()) ;
     fork_on (i mod 4) (fun () -> if RLock.try_acq l then
                                    (lock_and_call l 100 ;
-                                    RLock.rel l)
-                                 else
-                                   () ;
+                                    ignore (RLock.rel l)) ;
                                  run (CDL.count_down cdl) ())
   done ;
 

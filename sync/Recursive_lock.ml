@@ -4,7 +4,8 @@ module type S = sig
 
   val create  : unit -> t
   val acq     : t -> unit
-  val rel     : t -> unit
+  (** [rel l] returns [false] if the lock is either not held or held by another thread  *)
+  val rel     : t -> bool
   (** [try_acq l] returns [true] if the lock was successful *)
   val try_acq : t -> bool
 end
@@ -48,17 +49,31 @@ module Make (Reagents: Reagents.S) : S
     ignore (run (Lock.rel l) ())
 
   let rel (l, cv, o, c) =
+    let tid = Reagents.get_tid () in
     run (Lock.acq l) () ;
-    ignore (run (Count.dec c) ()) ;
-    (* Counter is 0 when rel is called the same amount of times as acq *)
-    if (run (Count.get c) () = 0) then
-      begin
-        (* Release ownership and notify one waiting thread *)
-        o := None ;
-        CV.signal cv
-      end ;
+    let res =
+      (match !o with
+       | Some co ->
+          if co = tid then
+            begin
+              ignore (run (Count.dec c) ()) ;
+              (* Counter is 0 when rel is called the same amount of times as acq *)
+              if (run (Count.get c) () = 0) then
+                begin
+                  (* Release ownership and notify one waiting thread *)
+                  o := None ;
+                  CV.signal cv
+                end ;
+              true
+            end
+          else
+            (* Not the owner, don't release *)
+            false
+       | None ->
+          (* No current owner, don't release *)
+          false) in
     ignore (run (Lock.rel l) ()) ;
-    ()
+    res
 
 
   let try_acq (l, cv, o, c) =
@@ -67,8 +82,7 @@ module Make (Reagents: Reagents.S) : S
     let res =
       (match !o with
        | Some co ->
-          if co = tid
-          then
+          if co = tid then
             (* Already the owner, increase lock count *)
             (ignore (run (Count.inc c) ()) ; true)
           else
@@ -76,7 +90,7 @@ module Make (Reagents: Reagents.S) : S
             false
        | None ->
           begin
-            (* No current oner, take the lock *)
+            (* No current owner, take the lock *)
             o := Some tid ;
             ignore (run (Count.inc c) ()) ;
             true
