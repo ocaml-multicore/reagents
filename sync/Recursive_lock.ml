@@ -31,18 +31,19 @@ module Make (Reagents: Reagents.S) : S
   let create () = (Lock.create (), CV.create (), ref None, Count.create 0)
 
   let acq (l, cv, o, c) =
+    let tid = Reagents.get_tid () in
     run (Lock.acq l) () ;
     (match !o with
      | Some co ->
-        if co <> (Reagents.get_tid ()) then
+        if co <> tid then
           begin
             (* Not the owner, wait until there is no owner *)
             while (not (is_none !o)) do ignore (CV.wait l cv) done ;
-            o := Some (Reagents.get_tid ())
+            o := Some tid
           end
      | None ->
         (* No current owner, take the lock *)
-        (o := Some (Reagents.get_tid ()))) ;
+        o := Some tid) ;
     ignore (run (Count.inc c) ()) ;
     ignore (run (Lock.rel l) ())
 
@@ -61,11 +62,12 @@ module Make (Reagents: Reagents.S) : S
 
 
   let try_acq (l, cv, o, c) =
+    let tid = Reagents.get_tid () in
     run (Lock.acq l) () ;
     let res =
       (match !o with
        | Some co ->
-          if co = (Reagents.get_tid ())
+          if co = tid
           then
             (* Already the owner, increase lock count *)
             (ignore (run (Count.inc c) ()) ; true)
@@ -75,7 +77,7 @@ module Make (Reagents: Reagents.S) : S
        | None ->
           begin
             (* No current oner, take the lock *)
-            o := Some (Reagents.get_tid ()) ;
+            o := Some tid ;
             ignore (run (Count.inc c) ()) ;
             true
           end) in
