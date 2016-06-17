@@ -26,6 +26,7 @@ module Make (Reagents: Reagents.S) : S
 
   type owner = int option ref
 
+  (** A recursive lock is a lock, a condition variable, an owner, and a counter *)
   type t = Lock.t * CV.t * owner * Count.t
 
   let create () = (Lock.create (), CV.create (), ref None, Count.create 0)
@@ -33,17 +34,26 @@ module Make (Reagents: Reagents.S) : S
   let acq (l, cv, o, c) =
     run (Lock.acq l) () ;
     (match !o with
-     | Some co -> if co <> (GetId.get_tid ()) then
-                    (ignore (while (not @@ is_none !o) do CV.wait l cv done) ;
-                     o := Some (GetId.get_tid ()))
-     | None -> o := Some (GetId.get_tid ())) ;
-    ignore @@ run (Count.inc c) () ;
-    ignore @@ run (Lock.rel l) ()
+     | Some co ->
+        if co <> (GetId.get_tid ()) then
+          begin
+            (* Not the owner, wait until there is no owner *)
+            while (not (is_none !o)) do ignore (CV.wait l cv) done ;
+            o := Some (GetId.get_tid ())
+          end
+     | None ->
+        (* No current owner, take the lock *)
+        (o := Some (GetId.get_tid ()))) ;
+    ignore (run (Count.inc c) ()) ;
+    ignore (run (Lock.rel l) ())
 
   let rel (l, cv, o, c) =
     run (Lock.acq l) () ;
-    ignore @@ run (Count.dec c) () ;
-    if (run (Count.get c) () = 0) then begin
+    ignore (run (Count.dec c) ()) ;
+    (* Counter is 0 when rel is called the same amount of times as acq *)
+    if (run (Count.get c) () = 0) then
+      begin
+        (* Release ownership and notify one waiting thread *)
         o := None ;
         CV.signal cv
       end ;
@@ -55,12 +65,19 @@ module Make (Reagents: Reagents.S) : S
     run (Lock.acq l) () ;
     let res =
       (match !o with
-       | Some co -> if co = (GetId.get_tid ()) then (ignore (run (Count.inc c) ()) ; true)
-                    else false
+       | Some co ->
+          if co = (GetId.get_tid ())
+          then
+            (* Already the owner, increase lock count *)
+            (ignore (run (Count.inc c) ()) ; true)
+          else
+            (* Not the owner, don't wait on lock *)
+            false
        | None ->
           begin
+            (* No current oner, take the lock *)
             o := Some (GetId.get_tid ()) ;
-            ignore @@ run (Count.inc c) () ;
+            ignore (run (Count.inc c) ()) ;
             true
           end) in
     ignore (run (Lock.rel l) ()) ;
