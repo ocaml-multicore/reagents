@@ -19,7 +19,7 @@ type 'a updt = { expect : 'a ; update : 'a }
 
 type 'a state =
   | Idle of 'a
-  | InProgress of 'a * int * t list
+  | InProgress of 'a
 
 and 'a ref = { mutable content : 'a state ;
                         id      : int      }
@@ -36,7 +36,7 @@ let ref x = { content = Idle x           ;
 
 let get r = match r.content with
   | Idle a -> a
-  | InProgress (a,_,_) -> a
+  | InProgress a -> a
 
 let cas r u = CAS (r, u)
 
@@ -52,43 +52,45 @@ let commit (CAS (r, { expect ; update })) =
       else compare_and_swap r s (Idle update)
   | _ -> false
 
-let rec semicas id = function
-  | [] -> true
-  | (CAS (r, { expect ; _ }))::xs ->
+(* Try to acquire a list of CASes and return, in the case of failure, the CASes
+ * that must be rolled back. *)
+let semicas cases =
+  let rec loop log = function
+    | [] -> None (* All CASes have been aquired and none must be rolled back.*)
+    | (CAS (r, { expect ; _ })) as cas :: xs ->
       let s = r.content in
       match s with
       | Idle a ->
-          if a == expect then
-            if compare_and_swap r s (InProgress (a,id,xs)) then
-              semicas id xs (* continue with the rest of the CASes *)
-            else false (* CAS has failed *)
-          else false (* CAS will fail *)
-      | InProgress (_,id',k') ->
-          if id = id'
-          then false (* Multiple compare and swaps on the same location. *)
-          else (* Race lost! Help complete the victorious thread's kCAS *)
-            ( ignore (semicas id' k'); false )
+        if a == expect then
+          if compare_and_swap r s (InProgress a) then
+            (* CAS succeeded, add it to the rollback log and continue
+             * with the rest of the CASes. *)
+            loop (cas::log) xs
+          else Some log (* CAS failed, return the rollback log. *)
+        else Some log  (* CAS will fail, ditto. *)
+      | InProgress _ ->
+        (* This thread lost the race to acquired the CASes. *)
+        Some log
+  in loop [] cases
 
 (* Only the thread that performed the semicas should be able to rollbwd/fwd.
  * Hence, we don't need to CAS. *)
 let rollbwd (CAS (r, _)) =
   match r.content with
   | Idle _      -> ()
-  | InProgress (x,_,_) -> r.content <- Idle x
+  | InProgress x -> r.content <- Idle x
 
 let rollfwd (CAS (r, { update ; _ })) =
   match r.content with
   | Idle _ -> failwith "CAS.kCAS: broken invariant"
-  | InProgress (x,_,_) ->  r.content <- Idle update
+  | InProgress x ->  r.content <- Idle update
                     (* we know we have x == expect *)
 
 let kCAS l =
   let l = List.sort (fun c1 c2 -> compare (get_cas_id c1) (get_cas_id c2)) l in
-  let id = Oo.id (object end) in
-  if semicas id l then
-    ( List.iter rollfwd l ; true )
-  else
-    ( List.iter rollbwd l ; false )
+  match semicas l with
+  | None -> List.iter rollfwd l; true
+  | Some log -> List.iter rollbwd log; false
 
 module Sugar : sig
   val ref : 'a -> 'a ref
