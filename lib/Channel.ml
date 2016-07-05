@@ -43,7 +43,7 @@ module Make (Sched : Scheduler.S) : S with
       let rx = Reaction.union sender_rx receiver_rx in
       let cas = Offer.complete sender_offer c in
       let new_rx =
-        if can_cas_immediate receiver_k receiver_rx receiver_offer then
+        if can_cas_immediate receiver_k rx receiver_offer then
           match PostCommitCAS.commit cas with
           | None -> None
           | Some f -> ( f (); Some rx )
