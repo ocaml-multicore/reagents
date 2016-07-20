@@ -123,7 +123,7 @@ module Make (Sched: Scheduler.S) : S
 
   let rec choose : 'a 'b 'r. ('a,'b) t -> ('a,'b) t -> ('a,'b) t =
     fun r1 r2 ->
-      { always_commits = r1.always_commits && r1.always_commits;
+      { always_commits = r1.always_commits && r2.always_commits;
         compose = (fun next -> choose (r1.compose next) (r2.compose next));
         try_react = fun a rx offer ->
           match r1.try_react a rx offer with
