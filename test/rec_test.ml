@@ -8,7 +8,12 @@ module Sync = Reagents_sync.Make(Reagents)
 module RLock = Sync.Recursive_lock
 module CDL = Sync.Countdown_latch
 
-let rec lock_and_call l i = RLock.acq l ; callback l i ; ignore (RLock.rel l)
+let flip f a b = f b a
+
+let rec lock_and_call l i = 
+  flip run () @@ RLock.acq l ; 
+  callback l i ; 
+  ignore (flip run () @@ RLock.rel l)
 and callback l i = if i > 0 then lock_and_call l (i - 1)
 
 let main () =
@@ -28,9 +33,9 @@ let main () =
   for i = 0 to 99 do
     fork_on (i mod 4) (fun () -> run (RLock.acq l) () ;
                          if run (RLock.try_acq l) ()
-                         then run (RLock.rel l) ()
+                         then ignore @@ run (RLock.rel l) ()
                          else assert false ;
-                         run (RLock.rel l) () ;
+                         ignore @@ run (RLock.rel l) () ;
                          run (CDL.count_down cdl) ()) ;
     fork_on (i mod 4) (fun () -> if run (RLock.try_acq l) () then
                                    (lock_and_call l 100 ;
