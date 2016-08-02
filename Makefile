@@ -4,8 +4,8 @@ TEST=test/swap_test.native test/ref_test.native test/counter_test.native \
 		 test/rec_test.native
 BENCH=test/reagent_queue.native test/hw_queue.native test/eli_stack.native \
 			test/trieber_stack.native
-FLAGS=-Is lib,data,sync -cflag -annot -lib unix
-BCFLAGS=-ocamlc ocamlcp -cflag -annot -cflag -g -lflag -g $(FLAGS)
+FLAGS=-Is lib,data,sync -cflag -bin-annot -lib unix
+BCFLAGS=-ocamlc ocamlcp -cflag -bin-annot -cflag -g -lflag -g $(FLAGS)
 BAFLAGS=-cflag -annot -cflag -g -lflag -g $(FLAGS)
 
 all: reagents data sync tests

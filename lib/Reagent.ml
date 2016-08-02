@@ -103,6 +103,7 @@ module Make (Sched: Scheduler.S) : S
     let new_rx v rx = Reaction.with_post_commit rx (fun () -> f v) in
     mk_reagent {ret_val; new_rx} commit
 
+  (* [f] should be a pure function *)
   let lift (f : 'a -> 'b option) : ('a,'b) t =
     let ret_val v =
       match f v with
