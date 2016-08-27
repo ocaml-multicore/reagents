@@ -22,7 +22,7 @@ type 'a state =
   | InProgress of 'a
 
 and 'a ref = { mutable content : 'a state ;
-                        id      : int      }
+                       id      : int      }
 
 and t = CAS : 'a ref * 'a updt -> t
 
@@ -44,13 +44,24 @@ let is_on_ref (CAS (r1, _)) r2 = r1.id == r2.id
 
 let get_cas_id (CAS ({id;_},_)) = id
 
-let commit (CAS (r, { expect ; update })) =
-  let s = r.content in
-  match s with
-  | Idle a when a == expect ->
-      if expect == update then true
-      else compare_and_swap r s (Idle update)
-  | _ -> false
+let rec commit ((CAS (r, { expect ; update })) as cas) =
+  let body f =
+    let s = r.content in
+    match s with
+    | Idle a when a == expect ->
+        if expect != update then f ()
+        else true
+    | _ -> false
+  in
+  let opt () = body (fun () ->
+    r.content <- Idle update;
+    true)
+  in
+  let pes = function
+    | XAbort_retry -> commit cas
+    | _ -> body (fun () -> compare_and_swap r r.content (Idle update))
+  in
+  atomically opt pes
 
 (* Try to acquire a list of CASes and return, in the case of failure, the CASes
  * that must be rolled back. *)
@@ -63,8 +74,8 @@ let semicas cases =
       | Idle a ->
         if a == expect then
           if compare_and_swap r s (InProgress a) then
-            (* CAS succeeded, add it to the rollback log and continue
-             * with the rest of the CASes. *)
+            (* CAS succeeded, add it to the rollback log and continue with the
+             * rest of the CASes. *)
             loop (cas::log) xs
           else Some log (* CAS failed, return the rollback log. *)
         else Some log  (* CAS will fail, ditto. *)
@@ -86,11 +97,25 @@ let rollfwd (CAS (r, { update ; _ })) =
   | InProgress x ->  r.content <- Idle update
                     (* we know we have x == expect *)
 
-let kCAS l =
-  let l = List.sort (fun c1 c2 -> compare (get_cas_id c1) (get_cas_id c2)) l in
-  match semicas l with
-  | None -> List.iter rollfwd l; true
-  | Some log -> List.iter rollbwd log; false
+let rec kCAS_optimistic = function
+  | [] -> true
+  | (CAS (r, {expect; update}))::xs ->
+      match r.content with
+      | Idle a when a == expect ->
+          (if expect != update then r.content <- Idle update);
+          kCAS_optimistic xs
+      | _ -> xabort 0
+
+let rec kCAS l =
+  atomically (fun () -> kCAS_optimistic l) (function
+    | XAbort_retry -> kCAS l
+    | _ ->
+      let l = List.sort (fun c1 c2 ->
+                (get_cas_id c1) - (get_cas_id c2)) l
+      in
+      match semicas l with
+      | None -> List.iter rollfwd l; true
+      | Some log -> List.iter rollbwd log; false)
 
 module Sugar : sig
   val ref : 'a -> 'a ref
