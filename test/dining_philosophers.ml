@@ -62,12 +62,13 @@ let eat l_fork r_fork i j =
 
 let main () =
   let b = CDL.create num_philosophers in
-  let forks = Array.init num_philosophers (fun _ -> mk_fork ()) in
+  let num_forks = if num_philosophers = 1 then 2 else num_philosophers in
+  let forks = Array.init num_forks (fun _ -> mk_fork ()) in
   Array.iter (fun fork -> S.fork @@ run (drop fork)) forks;
 
   let work i () =
     let l_fork = forks.(i) in
-    let r_fork = forks.((i + 1) mod num_philosophers) in
+    let r_fork = forks.((i + 1) mod num_forks) in
     for j = 1 to num_rounds do
       eat l_fork r_fork i j
     done;
