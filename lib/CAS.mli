@@ -45,6 +45,8 @@ val incr : int ref -> unit
 
 val decr : int ref -> unit
 
+val print_stats : int -> unit
+
 module Sugar : sig
   val ref : 'a -> 'a ref
   val (!) : 'a ref -> 'a

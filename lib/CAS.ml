@@ -46,7 +46,11 @@ let get_cas_id (CAS ({id;_},_)) = id
 
 let debug s = () (* print_string s *)
 
+let rtm_stats = Array.init 128 (fun _ -> Array.make 8 0)
+
 let rec commit ((CAS (r, { expect ; update })) as cas) =
+  let br = Pervasives.ref 0 in
+  let dom_id = Domain.self () in
   let body f =
     let s = r.content in
     match s with
@@ -57,18 +61,24 @@ let rec commit ((CAS (r, { expect ; update })) as cas) =
   in
   let opt () = body (fun () ->
     r.content <- Idle update;
+    rtm_stats.(dom_id).(0) <- rtm_stats.(dom_id).(0) + 1;
     true)
   in
   let pes s =
-    if s land 0x2 > 0 then
+    br := 1;
+    if (s land 0x2 > 0 || s land 0x4 > 0) then
       (* XAbort_retry *)
       (debug @@ Printf.sprintf "XAbort_retry\n%!";
+       rtm_stats.(dom_id).(1) <- rtm_stats.(dom_id).(1) + 1;
        commit cas)
     else
       (debug @@ Printf.sprintf "XAbort: %d\n%!" s;
+       rtm_stats.(dom_id).(2) <- rtm_stats.(dom_id).(2) + 1;
        body (fun () -> compare_and_swap r r.content (Idle update)))
   in
-  atomically opt pes
+  let res = atomically opt pes in
+  if !br = 0 && res then debug @@ Printf.sprintf "RTM success\n%!";
+  res
 
 (* Try to acquire a list of CASes and return, in the case of failure, the CASes
  * that must be rolled back. *)
@@ -104,29 +114,37 @@ let rollfwd (CAS (r, { update ; _ })) =
   | InProgress x ->  r.content <- Idle update
                     (* we know we have x == expect *)
 
-let rec kCAS_optimistic = function
-  | [] -> true
+let rec kCAS_optimistic dom_id = function
+  | [] ->
+      rtm_stats.(dom_id).(0) <- rtm_stats.(dom_id).(0) + 1;
+      true
   | (CAS (r, {expect; update}))::xs ->
       match r.content with
       | Idle a when a == expect ->
           (if expect != update then r.content <- Idle update);
-          kCAS_optimistic xs
+          kCAS_optimistic dom_id xs
       | _ -> xabort 0
 
 let rec kCAS l =
-  atomically (fun () -> kCAS_optimistic l) (fun s ->
-    if s land 0x2 > 0 then
-      (* XAbort_retry *)
-      (debug @@ Printf.sprintf "kCAS: XAbort_retry\n%!";
-      kCAS l)
-    else
-      (debug @@ Printf.sprintf "kCAS: XAbort: %d\n%!" s;
-      let l = List.sort (fun c1 c2 ->
-                (get_cas_id c1) - (get_cas_id c2)) l
-      in
-      match semicas l with
-      | None -> List.iter rollfwd l; true
-      | Some log -> List.iter rollbwd log; false))
+  let dom_id = Domain.self () in
+  let res =
+    atomically (fun () -> kCAS_optimistic dom_id l) (fun s ->
+      if (s land 0x2 > 0 || s land 0x4 > 0) then
+        (* XAbort_retry *)
+        (debug @@ Printf.sprintf "kCAS: XAbort_retry\n%!";
+        rtm_stats.(dom_id).(1) <- rtm_stats.(dom_id).(1) + 1;
+        kCAS l)
+      else
+        (debug @@ Printf.sprintf "kCAS: XAbort: %d\n%!" s;
+        rtm_stats.(dom_id).(2) <- rtm_stats.(dom_id).(2) + 1;
+        let l = List.sort (fun c1 c2 ->
+                  (get_cas_id c1) - (get_cas_id c2)) l
+        in
+        match semicas l with
+        | None -> List.iter rollfwd l; true
+        | Some log -> List.iter rollbwd log; false))
+  in
+  res
 
 module Sugar : sig
   val ref : 'a -> 'a ref
@@ -167,3 +185,10 @@ let map r f =
 
 let incr r = ignore @@ map r (fun x -> Some (x + 1))
 let decr r = ignore @@ map r (fun x -> Some (x - 1))
+
+let print_stats n =
+  for i = 0 to n -1
+  do
+    Printf.printf "[%d] success=%d retry=%d abort=%d\n"
+      i (rtm_stats.(i).(0)) (rtm_stats.(i).(1)) (rtm_stats.(i).(2))
+  done
