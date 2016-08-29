@@ -44,6 +44,8 @@ let is_on_ref (CAS (r1, _)) r2 = r1.id == r2.id
 
 let get_cas_id (CAS ({id;_},_)) = id
 
+let debug s = ()
+
 let rec commit ((CAS (r, { expect ; update })) as cas) =
   let body f =
     let s = r.content in
@@ -57,9 +59,14 @@ let rec commit ((CAS (r, { expect ; update })) as cas) =
     r.content <- Idle update;
     true)
   in
-  let pes = function
-    | XAbort_retry -> commit cas
-    | _ -> body (fun () -> compare_and_swap r r.content (Idle update))
+  let pes s =
+    if s land 0x2 > 0 then
+      (* XAbort_retry *)
+      (debug @@ Printf.sprintf "XAbort_retry\n";
+       commit cas)
+    else
+      (debug @@ Printf.sprintf "XAbort: %d\n" s;
+       body (fun () -> compare_and_swap r r.content (Idle update)))
   in
   atomically opt pes
 
@@ -107,15 +114,19 @@ let rec kCAS_optimistic = function
       | _ -> xabort 0
 
 let rec kCAS l =
-  atomically (fun () -> kCAS_optimistic l) (function
-    | XAbort_retry -> kCAS l
-    | _ ->
+  atomically (fun () -> kCAS_optimistic l) (fun s ->
+    if s land 0x2 > 0 then
+      (* XAbort_retry *)
+      (debug @@ Printf.sprintf "kCAS: XAbort_retry\n";
+      kCAS l)
+    else
+      (debug @@ Printf.sprintf "kCAS: XAbort: %d\n" s;
       let l = List.sort (fun c1 c2 ->
                 (get_cas_id c1) - (get_cas_id c2)) l
       in
       match semicas l with
       | None -> List.iter rollfwd l; true
-      | Some log -> List.iter rollbwd log; false)
+      | Some log -> List.iter rollbwd log; false))
 
 module Sugar : sig
   val ref : 'a -> 'a ref
