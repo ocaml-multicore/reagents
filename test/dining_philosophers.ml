@@ -56,7 +56,7 @@ let take f = swap f.take
 
 let eat l_fork r_fork i j =
   ignore @@ run (take l_fork <*> take r_fork) ();
-  printf "Philosopher %d eating in round %d\n%!" i j;
+  (* printf "Philosopher %d eating in round %d\n%!" i j; *)
   S.fork @@ run (drop l_fork);
   S.fork @@ run (drop r_fork)
 

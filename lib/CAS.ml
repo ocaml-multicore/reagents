@@ -44,7 +44,7 @@ let is_on_ref (CAS (r1, _)) r2 = r1.id == r2.id
 
 let get_cas_id (CAS ({id;_},_)) = id
 
-let debug s = ()
+let debug s = () (* print_string s *)
 
 let rec commit ((CAS (r, { expect ; update })) as cas) =
   let body f =
@@ -62,10 +62,10 @@ let rec commit ((CAS (r, { expect ; update })) as cas) =
   let pes s =
     if s land 0x2 > 0 then
       (* XAbort_retry *)
-      (debug @@ Printf.sprintf "XAbort_retry\n";
+      (debug @@ Printf.sprintf "XAbort_retry\n%!";
        commit cas)
     else
-      (debug @@ Printf.sprintf "XAbort: %d\n" s;
+      (debug @@ Printf.sprintf "XAbort: %d\n%!" s;
        body (fun () -> compare_and_swap r r.content (Idle update)))
   in
   atomically opt pes
@@ -117,10 +117,10 @@ let rec kCAS l =
   atomically (fun () -> kCAS_optimistic l) (fun s ->
     if s land 0x2 > 0 then
       (* XAbort_retry *)
-      (debug @@ Printf.sprintf "kCAS: XAbort_retry\n";
+      (debug @@ Printf.sprintf "kCAS: XAbort_retry\n%!";
       kCAS l)
     else
-      (debug @@ Printf.sprintf "kCAS: XAbort: %d\n" s;
+      (debug @@ Printf.sprintf "kCAS: XAbort: %d\n%!" s;
       let l = List.sort (fun c1 c2 ->
                 (get_cas_id c1) - (get_cas_id c2)) l
       in
