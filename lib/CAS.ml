@@ -70,6 +70,7 @@ let rec commit ((CAS (r, { expect ; update })) as cas) =
       (* XAbort_retry *)
       (debug @@ Printf.sprintf "XAbort_retry\n%!";
        rtm_stats.(dom_id).(1) <- rtm_stats.(dom_id).(1) + 1;
+       Domain.pause ();
        commit cas)
     else
       (debug @@ Printf.sprintf "XAbort: %d\n%!" s;
@@ -133,6 +134,7 @@ let rec kCAS l =
         (* XAbort_retry *)
         (debug @@ Printf.sprintf "kCAS: XAbort_retry\n%!";
         rtm_stats.(dom_id).(1) <- rtm_stats.(dom_id).(1) + 1;
+        Domain.pause ();
         kCAS l)
       else
         (debug @@ Printf.sprintf "kCAS: XAbort: %d\n%!" s;

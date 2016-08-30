@@ -66,7 +66,7 @@ let _ =
   for i = 1 to num_doms - 1
   do Domain.spawn core done
 
-(* let _ = Pervasives.at_exit (fun () -> CAS.print_stats num_doms) *)
+let _ = Pervasives.at_exit (fun () -> CAS.print_stats num_doms)
 let _ = core ()
 let _ = wait_till_done ()
 let _ = verify ()
