@@ -19,7 +19,7 @@ module type S = sig
   type ('a,'b) endpoint
   type ('a,'b) reagent
 
-  val mk_chan : unit -> ('a,'b) endpoint * ('b,'a) endpoint
+  val mk_chan : ?name:string -> unit -> ('a,'b) endpoint * ('b,'a) endpoint
   val swap    : ('a,'b) endpoint -> ('a,'b) reagent
 end
 
@@ -65,20 +65,26 @@ module Make (Sched : Scheduler.S) : S with
     Message (sender_offer, complete_exchange)
 
   type ('a,'b) endpoint =
-    { outgoing: ('a,'b) message MSQueue.t;
+    { name : string;
+      outgoing: ('a,'b) message MSQueue.t;
       incoming: ('b,'a) message MSQueue.t }
 
-  let mk_chan () =
+  let mk_chan ?name () =
+    let name = 
+      match name with
+      | None -> ""
+      | Some n -> n
+    in
     let l1 = MSQueue.create () in
     let l2 = MSQueue.create () in
-    {incoming = l1; outgoing = l2},
-    {incoming = l2; outgoing = l1}
+    {name = "+" ^ name; incoming = l1; outgoing = l2},
+    {name = "-" ^ name; incoming = l2; outgoing = l1}
 
   let message_is_active (Message (o,_)) = Offer.is_active o
 
   let rec swap : 'a 'b 'r. ('a,'b) endpoint -> ('b,'r) reagent -> ('a,'r) reagent =
     let try_react ep k a rx offer =
-      let {outgoing; incoming} = ep in
+      let {name; outgoing; incoming} = ep in
       (* Search for matching offers *)
       let rec try_from cursor retry =
         match MSQueue.next cursor with
@@ -91,8 +97,10 @@ module Make (Sched : Scheduler.S) : S with
             ( if (not (Offer.is_active sender_offer))
                 || Reaction.has_offer rx sender_offer
                 || same_offer sender_offer offer then
+(*                   let _ = Printf.printf "me!!\n" in *)
                   try_from cursor retry
               else (* Found matching offer *)
+(*                 let _ = Printf.printf "found matching offer!\n" in *)
                 let new_rx = Reaction.with_offer rx sender_offer in
                 let merged = exchange.compose k in
                 match merged.try_react a new_rx offer with
@@ -103,9 +111,12 @@ module Make (Sched : Scheduler.S) : S with
       ( begin
           match offer with
           | Some offer (* when (not k.may_sync) *) ->
+(*               Printf.printf "[%d,%s] pushing offer %d\n"  *)
+(*                 (Sched.get_tid ()) name @@ Offer.get_id offer; *)
               MSQueue.push outgoing (mk_message a rx k offer)
           | _ -> ()
         end;
+(*         Printf.printf "[%d,%s] checking..\n" (Sched.get_tid()) name; *)
         MSQueue.clean_until incoming message_is_active;
         if MSQueue.is_empty incoming then Block
         else try_from (MSQueue.snapshot incoming) false )

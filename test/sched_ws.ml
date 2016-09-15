@@ -73,11 +73,17 @@ module Make (S : sig val num_domains : int end) : S = struct
     begin
       match f () with
       | () -> (CAS.decr num_threads; dequeue ())
-      | effect (Fork f) k -> enqueue k (Domain.self ()); spawn f (fresh_tid ())
+      | effect (Fork f) k -> 
+          let new_tid = fresh_tid () in
+          enqueue k (Domain.self ()); 
+(*           Printf.printf "forking thread %d\n" new_tid; *)
+          spawn f new_tid
       | effect Yield k -> enqueue k (Domain.self ()); dequeue ()
       | effect (Suspend f) k ->
           ( match f (k, Domain.self()) with
-            | None -> dequeue ()
+            | None -> 
+(*                 Printf.printf "[%d] Suspending thread\n%!" tid; *)
+                dequeue ()
             | Some v -> continue k v )
       | effect (Resume ((t,qid), v)) k -> enqueue k qid; continue t v
       | effect GetTid k -> continue k tid
@@ -98,7 +104,9 @@ module Make (S : sig val num_domains : int end) : S = struct
     for i = 1 to num_domains - 1 do
       Domain.spawn worker
     done ;
-    spawn (fun () -> CAS.incr started; f ()) (fresh_tid ())
+    let new_tid = fresh_tid () in
+(*     Printf.printf "forking thread %d\n" new_tid; *)
+    spawn (fun () -> CAS.incr started; f ()) new_tid
 
   let run f = run_with f S.num_domains
 
