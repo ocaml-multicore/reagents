@@ -35,6 +35,7 @@ module Make (S : sig val num_domains : int end) : S = struct
   effect Suspend  : ('a cont -> 'a option) -> 'a
   effect Resume   : ('a cont * 'a) -> unit
   effect GetTid   : int
+  effect Save     : unit
 
   let fork f      = perform (Fork f)
   let yield ()    = perform Yield
@@ -56,6 +57,8 @@ module Make (S : sig val num_domains : int end) : S = struct
 
   let enqueue c dom_id = MSQueue.push (Array.get sq dom_id) c
 
+  type k = K : ('a,'b) continuation -> k
+
   let rec dequeue_wid dom_id =
     let b = Backoff.create () in
     let queue = Array.get sq dom_id in
@@ -66,28 +69,37 @@ module Make (S : sig val num_domains : int end) : S = struct
           else ( Backoff.once b ; loop () )
     in loop ()
   and dequeue () = dequeue_wid (Domain.self ())
+  and all_k = MSQueue.create ()
   and spawn f (tid:int) =
     Cas.incr num_threads;
     begin
-      match f () with
+      match perform Save; f () with
       | () -> (Cas.decr num_threads; dequeue ())
+      | exception e ->
+          Printf.printf "EXCEPTION: %s\n%!" @@ Printexc.to_string e;
+          exit(1)
+      | effect Save k -> 
+          MSQueue.push all_k (K k); continue k ()
       | effect (Fork f) k -> 
           let new_tid = fresh_tid () in
           enqueue k (Domain.self ()); 
 (*           Printf.printf "forking thread %d\n" new_tid; *)
           spawn f new_tid
       | effect Yield k -> enqueue k (Domain.self ()); dequeue ()
-      | effect (Suspend f) k ->
+      | effect (Suspend f) k -> 
+          begin
           ( match f (k, Domain.self()) with
             | None -> 
 (*                 Printf.printf "[%d] Suspending thread\n%!" tid; *)
                 dequeue ()
             | Some v -> continue k v )
+          end
       | effect (Resume ((t,qid), v)) k -> enqueue k qid; continue t v
       | effect GetTid k -> continue k tid
       | effect NumDomains k -> continue k (S.num_domains)
       | effect (ForkOn (f, dom_id)) k ->
-          (enqueue k dom_id; spawn f (fresh_tid ()))
+          (enqueue k dom_id; 
+           spawn f (fresh_tid ()))
     end
 
   let run_with f num_domains =
