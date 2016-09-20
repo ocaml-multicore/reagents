@@ -14,19 +14,19 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-module S = CAS.Sugar
+type 'a t = ('a list * 'a list) ref * bool Cas.ref
 
-type 'a t = ('a list * 'a list) ref * bool CAS.ref
+let rec lock m (a,b) = 
+  if Cas.cas m a b then ()
+  else lock m (a,b)
 
-let rec lock m =
-  if S.(<!=) m (S.(-->) false true) then ()
-  else lock m
+let lock m = lock m (false, true)
 
 let rec unlock m =
-  if S.(<!=) m (S.(-->) true false) then ()
+  if Cas.cas m true false then ()
   else unlock m
 
-let create () = (ref ([], []), S.ref false)
+let create () = (ref ([], []), Cas.ref false)
 
 let push (q,m) v =
   lock m;

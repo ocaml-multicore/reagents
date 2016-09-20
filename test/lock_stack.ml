@@ -1,5 +1,5 @@
 (*
- * Copyright (c) 2015, KC Sivaramakrishnan <sk826@cl.cam.ac.uk>
+ * Copyright (c) 2015, Théo Laurent <theo.laurent@ens.fr>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,17 +14,34 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-module type S = sig
-  type t
-  type 'a offer
-  val empty : t
-  val with_CAS   : t -> PostCommitCAS.t -> t
-  val with_offer : t -> 'a offer -> t
-  val try_commit : t -> bool
-  val cas_count  : t -> int
-  val has_offer  : t -> 'a offer -> bool
-  val union      : t -> t -> t
-  val with_post_commit : t -> (unit -> unit) -> t
-end
+type 'a t = 'a list ref * bool Cas.ref
 
-module Make (Sched: Scheduler.S) : S with type 'a offer = 'a Offer.Make(Sched).t
+let max_iters = 100000
+
+let rec lock m = function
+  | 0 -> 
+      begin
+        ignore (Unix.select [] [] [] 0.1);
+        lock m max_iters
+      end
+  | n -> 
+      if Cas.cas m false true then ()
+      else lock m (n - 1)
+
+let lock m = lock m max_iters
+
+let rec unlock m =
+  if Cas.cas m true false then ()
+  else unlock m
+
+let create () = (ref [], Cas.ref false)
+
+let push (l,m) v = lock m; (l := v::!l); unlock m
+
+let pop (l,m) =
+  lock m;
+  let r = match !l with
+          | [] -> None
+          | x::xl -> (l := xl; Some x)
+  in
+  unlock m; r

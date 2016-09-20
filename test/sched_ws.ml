@@ -48,9 +48,7 @@ module Make (S : sig val num_domains : int end) : S = struct
   let fork_on f dom_id = perform (ForkOn (f, dom_id))
   let num_domains () = perform NumDomains
 
-  open CAS.Sugar
-
-  let num_threads = ref 0
+  let num_threads = Cas.ref 0
 
   let sq = Array.init S.num_domains (fun _ -> MSQueue.create ())
 
@@ -64,15 +62,15 @@ module Make (S : sig val num_domains : int end) : S = struct
     let rec loop () = match MSQueue.pop queue with
       | Some k -> continue k ()
       | None ->
-          if !num_threads = 0 then ()
+          if Cas.get num_threads = 0 then ()
           else ( Backoff.once b ; loop () )
     in loop ()
   and dequeue () = dequeue_wid (Domain.self ())
   and spawn f (tid:int) =
-    CAS.incr num_threads;
+    Cas.incr num_threads;
     begin
       match f () with
-      | () -> (CAS.decr num_threads; dequeue ())
+      | () -> (Cas.decr num_threads; dequeue ())
       | effect (Fork f) k -> 
           let new_tid = fresh_tid () in
           enqueue k (Domain.self ()); 
@@ -93,11 +91,11 @@ module Make (S : sig val num_domains : int end) : S = struct
     end
 
   let run_with f num_domains =
-    let started = ref 0 in
+    let started = Cas.ref 0 in
     let worker () =
       let b = Backoff.create ~max:16 () in
       let rec loop () =
-        if !started = 1 then dequeue ()
+        if Cas.get started = 1 then dequeue ()
         else (Backoff.once b; loop ())
       in loop ()
     in
@@ -106,7 +104,7 @@ module Make (S : sig val num_domains : int end) : S = struct
     done ;
     let new_tid = fresh_tid () in
 (*     Printf.printf "forking thread %d\n" new_tid; *)
-    spawn (fun () -> CAS.incr started; f ()) new_tid
+    spawn (fun () -> Cas.incr started; f ()) new_tid
 
   let run f = run_with f S.num_domains
 

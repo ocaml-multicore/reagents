@@ -1,5 +1,4 @@
 (*
- * Copyright (c) 2015, Théo Laurent <theo.laurent@ens.fr>
  * Copyright (c) 2015, KC Sivaramakrishnan <sk826@cl.cam.ac.uk>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,40 +14,17 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-type 'a ref
-
-type 'a updt = { expect : 'a ; update : 'a }
-
-val ref : 'a -> 'a ref
-
-val get : 'a ref -> 'a
-
-val get_id : 'a ref -> int
-
-type t
-
-val cas : 'a ref -> 'a updt -> t
-
-val is_on_ref : t -> 'a ref -> bool
-
-val commit : t -> bool
-
-val kCAS : t list -> bool
-
-type 'a cas_result = Aborted | Failed | Success of 'a
-
-val try_map : 'a ref -> ('a -> 'a option) -> 'a cas_result
-
-val map : 'a ref -> ('a -> 'a option) -> 'a cas_result
-
-val incr : int ref -> unit
-
-val decr : int ref -> unit
-
-module Sugar : sig
-  val ref : 'a -> 'a ref
-  val (!) : 'a ref -> 'a
-  val (-->) : 'a -> 'a -> 'a updt
-  val (<!=) : 'a ref -> 'a updt -> bool
-  val (<:=) : 'a ref -> 'a updt -> t
+module type S = sig
+  type t
+  type 'a offer
+  val empty : t
+  val with_CAS   : t -> PostCommitCas.t -> t
+  val with_offer : t -> 'a offer -> t
+  val try_commit : t -> bool
+  val cas_count  : t -> int
+  val has_offer  : t -> 'a offer -> bool
+  val union      : t -> t -> t
+  val with_post_commit : t -> (unit -> unit) -> t
 end
+
+module Make (Sched: Scheduler.S) : S with type 'a offer = 'a Offer.Make(Sched).t

@@ -1,6 +1,5 @@
 (*
  * Copyright (c) 2015, Théo Laurent <theo.laurent@ens.fr>
- * Copyright (c) 2015, KC Sivaramakrishnan <sk826@cl.cam.ac.uk>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,16 +14,24 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-module type S = sig
-  type 'a t
-  val make       : unit -> 'a t
-  val equal      : 'a t -> 'b t -> bool
-  val is_active  : 'a t -> bool
-  val get_id     : 'a t -> int
-  val wait       : 'a t -> unit
-  val complete   : 'a t -> 'a -> PostCommitCAS.t
-  val rescind    : 'a t -> 'a option
-  val get_result : 'a t -> 'a option
-end
+open Printf
+module Scheduler = Sched_ws.Make(struct let num_domains = 1 end)
+module Reagents = Reagents.Make (Scheduler)
+open Scheduler
+open Reagents
+open Reagents.Channel
+open Reagents.Ref
 
-module Make (Sched : Scheduler.S) : S
+let id_str () = sprintf "%d:%d" (Domain.self ()) (get_tid ())
+
+let main () =
+  Printf.printf "This example blocks\n%!";
+  let (a,b) = mk_chan () in
+  let r = mk_ref 0 in
+  fork (fun () -> 
+    run (swap a >> 
+         upd r (fun _ () -> Some (1, ()))) ());
+  run (swap b >> 
+       upd r (fun _ () -> Some (2, ()))) ()
+
+let () = Scheduler.run main

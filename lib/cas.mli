@@ -1,4 +1,5 @@
 (*
+ * Copyright (c) 2015, Théo Laurent <theo.laurent@ens.fr>
  * Copyright (c) 2015, KC Sivaramakrishnan <sk826@cl.cam.ac.uk>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -14,13 +15,32 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-type 'a ref = 'a CAS.ref
+type 'a ref
+
 val ref : 'a -> 'a ref
+
 val get : 'a ref -> 'a
 
+val get_id : 'a ref -> int
+
 type t
-val return    : bool -> (unit -> unit) -> t
-val cas       : 'a ref -> 'a -> 'a -> (unit -> unit) -> t
+
+val mk_cas : 'a ref -> 'a -> 'a -> t
+
+val cas : 'a ref -> 'a -> 'a -> bool
+
 val is_on_ref : t -> 'a ref -> bool
-val commit    : t -> (unit -> unit) option
-val kCAS      : t list -> (unit -> unit) option
+
+val commit : t -> bool
+
+val kCAS : t list -> bool
+
+type 'a cas_result = Aborted | Failed | Success of 'a
+
+val try_map : 'a ref -> ('a -> 'a option) -> 'a cas_result
+
+val map : 'a ref -> ('a -> 'a option) -> 'a cas_result
+
+val incr : int ref -> unit
+
+val decr : int ref -> unit

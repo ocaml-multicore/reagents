@@ -1,5 +1,6 @@
 (*
  * Copyright (c) 2015, Théo Laurent <theo.laurent@ens.fr>
+ * Copyright (c) 2015, KC Sivaramakrishnan <sk826@cl.cam.ac.uk>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,26 +15,16 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-module S = CAS.Sugar
+module type S = sig
+  type 'a t
+  val make       : unit -> 'a t
+  val equal      : 'a t -> 'b t -> bool
+  val is_active  : 'a t -> bool
+  val get_id     : 'a t -> int
+  val wait       : 'a t -> unit
+  val complete   : 'a t -> 'a -> PostCommitCas.t
+  val rescind    : 'a t -> 'a option
+  val get_result : 'a t -> 'a option
+end
 
-type 'a t = 'a list ref * bool CAS.ref
-
-let rec lock m =
-  if S.(<!=) m (S.(-->) false true) then ()
-  else lock m
-
-let rec unlock m =
-  if S.(<!=) m (S.(-->) true false) then ()
-  else unlock m
-
-let create () = (ref [], S.ref false)
-
-let push (l,m) v = lock m; (l := v::!l); unlock m
-
-let pop (l,m) =
-  lock m;
-  let r = match !l with
-          | [] -> None
-          | x::xl -> (l := xl; Some x)
-  in
-  unlock m; r
+module Make (Sched : Scheduler.S) : S

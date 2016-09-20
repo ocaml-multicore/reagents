@@ -44,7 +44,7 @@ module Make (Sched : Scheduler.S) : S with
       let cas = Offer.complete sender_offer c in
       let new_rx =
         if can_cas_immediate receiver_k rx receiver_offer then
-          match PostCommitCAS.commit cas with
+          match PostCommitCas.commit cas with
           | None -> None
           | Some f -> ( f (); Some rx )
         else Some (Reaction.with_CAS rx cas)
