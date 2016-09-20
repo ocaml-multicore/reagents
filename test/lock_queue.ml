@@ -16,11 +16,19 @@
 
 type 'a t = ('a list * 'a list) ref * bool Cas.ref
 
-let rec lock m (a,b) = 
-  if Cas.cas m a b then ()
-  else lock m (a,b)
+let max_iters = 100000
 
-let lock m = lock m (false, true)
+let rec lock m = function
+  | 0 -> 
+      begin
+        ignore (Unix.select [] [] [] 0.1);
+        lock m max_iters
+      end
+  | n -> 
+      if Cas.cas m false true then ()
+      else lock m (n - 1)
+
+let lock m = lock m max_iters
 
 let rec unlock m =
   if Cas.cas m true false then ()
