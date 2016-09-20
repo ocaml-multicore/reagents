@@ -65,10 +65,10 @@ module Benchmark = struct
 end
 
 module type STACK = sig
-  type 'a t
-  val create : unit -> 'a t * 'a t
-  val push   : 'a t -> 'a -> unit
-  val pop    : 'a t -> 'a t -> 'a * 'a
+  type t
+  val create : unit -> t * t
+  val push   : t -> int -> unit
+  val pop    : t -> t -> int * int
 end
 
 module Sync = Reagents_sync.Make(Reagents)
@@ -81,7 +81,7 @@ module Test (Stack : STACK) = struct
     let b = CDL.create 3 in
     (* initialize work *)
     let rec produce id q = function
-      | 0 -> () (* printf "[%d] production complete\n%!" (Domain.self ()) *)
+      | 0 -> ()
       | i -> 
           let v = Random.int 1000 in
           Stack.push q v; 
@@ -108,7 +108,7 @@ module Data = Reagents_data.Make(Reagents)
 module T = Treiber_stack.Make(Reagents)
 
 module M1 : STACK = struct
-  type 'a t = 'a T.t
+  type t = int T.t
   let create () = (T.create (), T.create ())
   let push s v = Reagents.run (T.push s) v
   let pop s1 s2 = 
@@ -118,14 +118,33 @@ module M1 : STACK = struct
 end
 
 module M2 : STACK = struct
-  type 'a t = 'a T.t
+  type t = int T.t
   let create () = (T.create (), T.create ())
   let push s v = Reagents.run (T.push s) v
   let pop s1 s2 = Reagents.run (T.pop s1 <*> T.pop s2) () 
 end
 
+module M3 : STACK = struct
+  type t = int T.t
+  let create () = (T.create (), T.create ())
+  let push s v = Reagents.run (T.push s) v
+  let pop s1 s2 = Reagents.run (
+    (T.pop s1 >> lift (fun v -> ()) >> T.pop s2 >> lift (fun v -> (0,0))) 
+     <+> (T.pop s2 >> lift (fun v -> ()) >> T.pop s1 >> lift (fun v -> (0,0))) ) ()
+end
+
 
 let main () =
+  let module M = Test(M2) in
+  let (m,sd) = Benchmark.benchmark (fun () -> M.run items_per_dom) 5 in
+  printf "<*>: mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m);
+  Gc.full_major ();
+
+  let module M = Test(M3) in
+  let (m,sd) = Benchmark.benchmark (fun () -> M.run items_per_dom) 5 in
+  printf "<+>: mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m);
+  Gc.full_major ();
+
   let module M = Test(M1) in
   let (m,sd) = Benchmark.benchmark (fun () -> M.run items_per_dom) 5 in
   printf "Non-atomic: mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m);
