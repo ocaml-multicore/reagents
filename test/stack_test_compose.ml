@@ -1,5 +1,6 @@
 (*
  * Copyright (c) 2015, Théo Laurent <theo.laurent@ens.fr>
+ * Copyright (c) 2015-2016, KC Sivaramakrishnan <kc@kcsrk.info>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,26 +16,22 @@
  *)
 
 let print_usage_and_exit () =
-  print_endline @@ "Usage: " ^ Sys.argv.(0) ^ " <num_domains> <num_items>";
+  print_endline @@ "Usage: " ^ Sys.argv.(0) ^ " <num_items>";
   exit(0)
 
-let (num_doms, num_items) =
-  if Array.length Sys.argv < 3 then
+let num_items =
+  if Array.length Sys.argv < 2 then
     print_usage_and_exit ()
   else
-    try
-      let a = int_of_string (Sys.argv.(1)) in
-      let b = int_of_string (Sys.argv.(2)) in
-      (a,b)
-    with
+    try int_of_string (Sys.argv.(1)) with
     | Failure _ -> print_usage_and_exit ()
 
-let items_per_dom = num_items / num_doms
+let items_per_dom = num_items / 2
 
-let () = Printf.printf "items_per_domain = %d\n%!" items_per_dom
+let () = Printf.printf "items_per_domain = %d\n%!" @@ items_per_dom
 
 module M = struct
-  let num_domains = num_doms
+  let num_domains = 3
 end
 
 module S = Sched_ws.Make (M)
@@ -43,29 +40,6 @@ module Reagents = Reagents.Make (S)
 open Reagents
 
 open Printf
-
-module type STACK = sig
-  type 'a t
-  val create : unit -> 'a t
-  val push   : 'a t -> 'a -> unit
-  val pop    : 'a t -> 'a option
-end
-
-module type RSTACK = sig
-  type 'a t
-  val create  : unit -> 'a t
-  val push    : 'a t -> ('a, unit) Reagents.t
-  val try_pop : 'a t -> (unit, 'a option) Reagents.t
-end
-
-module MakeS (RQ : RSTACK) : STACK = struct
-
-  type 'a t = 'a RQ.t
-
-  let create = RQ.create
-  let push q v = Reagents.run (RQ.push q) v
-  let pop q = Reagents.run (RQ.try_pop q) ()
-end
 
 module Benchmark = struct
   let get_mean_sd l =
@@ -80,6 +54,7 @@ module Benchmark = struct
     let rec run acc = function
     | 0 -> acc
     | n ->
+        Gc.full_major();
         let t1 = Unix.gettimeofday () in
         let () = f () in
         let d = Unix.gettimeofday () -. t1 in
@@ -89,44 +64,73 @@ module Benchmark = struct
     get_mean_sd r
 end
 
+module type STACK = sig
+  type 'a t
+  val create : unit -> 'a t * 'a t
+  val push   : 'a t -> 'a -> unit
+  val pop    : 'a t -> 'a t -> 'a * 'a
+end
+
 module Sync = Reagents_sync.Make(Reagents)
 module CDL  = Sync.Countdown_latch
 
-module Test (Q : STACK) = struct
+module Test (Stack : STACK) = struct
 
-  let run num_doms items_per_domain =
-    let q : int Q.t = Q.create () in
-    let b = CDL.create num_doms in
+  let run items_per_domain =
+    let q1,q2= Stack.create () in
+    let b = CDL.create 3 in
     (* initialize work *)
-    let rec produce = function
+    let rec produce id q = function
       | 0 -> () (* printf "[%d] production complete\n%!" (Domain.self ()) *)
-      | i -> Q.push q i; produce (i-1)
+      | i -> 
+          let v = Random.int 1000 in
+          Stack.push q v; 
+          produce id q (i-1)
     in
-    let rec consume i =
-      match Q.pop q with
-      | None -> () (* print_string @@ sprintf "[%d] consumed=%d\n%!" (Domain.self ()) i *)
-      | Some _ -> consume (i+1)
+    let rec consume = function
+      | 0 -> ()
+      | i -> 
+          let (a,b) = Stack.pop q1 q2 in
+          consume (i-1)
     in
-    for i = 1 to num_doms - 1 do
-      S.fork_on (fun () ->
-        produce items_per_domain;
-        consume 0;
-        run (CDL.count_down b) ()) i
-    done;
-    produce items_per_domain;
-    consume 0;
+    S.fork_on (fun () ->
+      produce 1 q1 items_per_domain;
+      run (CDL.count_down b) ()) 1;
+    S.fork_on (fun () ->
+      produce 2 q2 items_per_domain;
+      run (CDL.count_down b) ()) 2;
+    consume items_per_domain;
     run (CDL.count_down b) ();
     run (CDL.await b) ()
 end
 
 module Data = Reagents_data.Make(Reagents)
+module T = Treiber_stack.Make(Reagents)
 
-let num_runs = 10
+module M1 : STACK = struct
+  type 'a t = 'a T.t
+  let create () = (T.create (), T.create ())
+  let push s v = Reagents.run (T.push s) v
+  let pop s1 s2 = 
+    let a = Reagents.run (T.pop s1) () in
+    let b = Reagents.run (T.pop s2) () in
+    (a,b)
+end
+
+module M2 : STACK = struct
+  type 'a t = 'a T.t
+  let create () = (T.create (), T.create ())
+  let push s v = Reagents.run (T.push s) v
+  let pop s1 s2 = Reagents.run (T.pop s1 <*> T.pop s2) () 
+end
+
 
 let main () =
-  let module M = Test(MakeS(Data.Treiber_stack)) in
-  let (m,sd) = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 10 in
-  printf "Treiber stack: mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m)
+  let module M = Test(M1) in
+  let (m,sd) = Benchmark.benchmark (fun () -> M.run items_per_dom) 5 in
+  printf "Non-atomic: mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m);
+  Gc.full_major ();
+
+  ()
 
 let () = S.run main
-let () = Unix.sleep 1
