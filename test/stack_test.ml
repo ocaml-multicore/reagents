@@ -110,9 +110,12 @@ module Test (Q : STACK) = struct
       | i -> Q.push q i; produce (i-1)
     in
     let rec consume i =
+      Printf.printf "%d\n%!" i;
       match Q.pop q with
-      | None -> () (* print_string @@ sprintf "[%d] consumed=%d\n%!" (Domain.self ()) i *)
-      | Some _ -> consume (i+1)
+      | None -> print_string @@ sprintf "[%d] consumed=%d\n%!" (Domain.self ()) i
+      | Some v -> 
+          Printf.printf "i+1 = %d\n" (i+1);
+          consume (i+1)
     in
     for i = 1 to num_doms - 1 do
       S.fork_on (fun () ->

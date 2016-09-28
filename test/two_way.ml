@@ -1,5 +1,5 @@
 (*
- * Copyright (c) 2015, KC Sivaramakrishnan <sk826@cl.cam.ac.uk>
+ * Copyright (c) 2015, Théo Laurent <theo.laurent@ens.fr>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,13 +14,28 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-type 'a ref = 'a CAS.ref
-val ref : 'a -> 'a ref
-val get : 'a ref -> 'a
+open Printf
+module Scheduler = Sched_ws.Make(struct let num_domains = 1 end)
+module Reagents = Reagents.Make (Scheduler)
+open Scheduler
+open Reagents
+open Reagents.Channel
 
-type t
-val return    : bool -> (unit -> unit) -> t
-val cas       : 'a ref -> 'a -> 'a -> (unit -> unit) -> t
-val is_on_ref : t -> 'a ref -> bool
-val commit    : t -> (unit -> unit) option
-val kCAS      : t list -> (unit -> unit) option
+let mk_tw_chan () =
+  let a_p,a_m = mk_chan ~name:"a" () in
+  let b_p,b_m = mk_chan ~name:"b" () in
+  (a_p, b_p), (a_m, b_m)
+
+let tw_swap (c1, c2) =
+  swap c1 >> swap c2
+
+let work sw v () =
+  let x = run (tw_swap sw) v in
+  Printf.printf "%d" x
+
+let main () =
+  let sw1, sw2= mk_tw_chan () in
+  fork (work sw1 1);
+  work sw2 2 ()
+
+let _ = Scheduler.run main

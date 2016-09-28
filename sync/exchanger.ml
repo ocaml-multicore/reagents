@@ -4,7 +4,7 @@
 module type S = sig
   type 'a t
   type ('a,'b) reagent
-  val create   : unit -> 'a t
+  val create   : ?name:string -> unit -> 'a t
   val exchange : 'a t -> ('a,'a) reagent
 end
 
@@ -17,6 +17,6 @@ module Make (Reagents : Reagents.S) : S
 
   type 'a t = ('a,'a) C.endpoint * ('a,'a) C.endpoint
 
-  let create = C.mk_chan
+  let create = C.mk_chan 
   let exchange e = C.swap (fst e) <+> C.swap (snd e)
 end

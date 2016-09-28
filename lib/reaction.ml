@@ -18,7 +18,7 @@ module type S = sig
   type t
   type 'a offer
   val empty : t
-  val with_CAS : t -> PostCommitCAS.t -> t
+  val with_CAS : t -> PostCommitCas.t -> t
   val with_offer : t -> 'a offer -> t
   val try_commit : t -> bool
   val cas_count  : t -> int
@@ -38,7 +38,7 @@ module Make (Sched: Scheduler.S) : S with type 'a offer = 'a Offer.Make(Sched).t
   end)
 
   type t =
-    { cases  : PostCommitCAS.t list;
+    { cases  : PostCommitCas.t list;
       offers : IntSet.t;
       post_commits : (unit -> unit) list }
 
@@ -70,6 +70,6 @@ module Make (Sched: Scheduler.S) : S with type 'a offer = 'a Offer.Make(Sched).t
     in
     match r.cases with
     | [] -> true
-    | [cas] -> do_post_commit r @@ PostCommitCAS.commit cas
-    | l -> do_post_commit r @@ PostCommitCAS.kCAS l
+    | [cas] -> do_post_commit r @@ PostCommitCas.commit cas
+    | l -> do_post_commit r @@ PostCommitCas.kCAS l
 end

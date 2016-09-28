@@ -25,18 +25,19 @@ module type S = sig
       compose : 'r. ('b,'r) t -> ('a,'r) t;
       always_commits : bool }
 
-  val never       : ('a,'b) t
-  val constant    : 'a -> ('b,'a) t
-  val post_commit : ('a -> unit) -> ('a, 'a) t
-  val lift        : ('a -> 'b option) -> ('a,'b) t
-  val computed    : ('a -> (unit, 'b) t) -> ('a,'b) t
-  val (>>=)       : ('a,'b) t -> ('b -> (unit,'c) t) -> ('a,'c) t
-  val (>>)        : ('a,'b) t -> ('b,'c) t -> ('a,'c) t
-  val choose      : ('a,'b) t -> ('a,'b) t -> ('a,'b) t
-  val (<+>)       : ('a,'b) t -> ('a,'b) t -> ('a,'b) t
-  val (<*>)       : ('a,'b) t -> ('a,'c) t -> ('a, 'b * 'c) t
-  val attempt     : ('a,'b) t -> ('a, 'b option) t
-  val run         : ('a,'b) t -> 'a -> 'b
+  val never         : ('a,'b) t
+  val constant      : 'a -> ('b,'a) t
+  val post_commit   : ('a -> unit) -> ('a, 'a) t
+  val lift          : ('a -> 'b) -> ('a,'b) t
+  val lift_blocking : ('a -> 'b option) -> ('a,'b) t
+  val computed      : ('a -> (unit, 'b) t) -> ('a,'b) t
+  val (>>=)         : ('a,'b) t -> ('b -> (unit,'c) t) -> ('a,'c) t
+  val (>>)          : ('a,'b) t -> ('b,'c) t -> ('a,'c) t
+  val choose        : ('a,'b) t -> ('a,'b) t -> ('a,'b) t
+  val (<+>)         : ('a,'b) t -> ('a,'b) t -> ('a,'b) t
+  val (<*>)         : ('a,'b) t -> ('a,'c) t -> ('a, 'b * 'c) t
+  val attempt       : ('a,'b) t -> ('a, 'b option) t
+  val run           : ('a,'b) t -> 'a -> 'b
 
   val commit : ('a,'a) t
   val can_cas_immediate : ('a,'b) t -> reaction -> 'c offer option -> bool

@@ -15,13 +15,34 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-module type S = sig
-  type ('a,'b) endpoint
-  type ('a,'b) reagent
+type 'a ref
 
-  val mk_chan : unit -> ('a,'b) endpoint * ('b,'a) endpoint
-  val swap    : ('a,'b) endpoint -> ('a,'b) reagent
-end
+val ref : 'a -> 'a ref
 
-module Make (Sched : Scheduler.S) : S with
-  type ('a,'b) reagent = ('a,'b) Reagent.Make(Sched).t
+val get : 'a ref -> 'a
+
+val get_id : 'a ref -> int
+
+type t
+
+val mk_cas : 'a ref -> 'a -> 'a -> t
+
+val cas : 'a ref -> 'a -> 'a -> bool
+
+val is_on_ref : t -> 'a ref -> bool
+
+val commit : t -> bool
+
+val kCAS : t list -> bool
+
+type 'a cas_result = Aborted | Failed | Success of 'a
+
+val try_map : 'a ref -> ('a -> 'a option) -> 'a cas_result
+
+val map : 'a ref -> ('a -> 'a option) -> 'a cas_result
+
+val incr : int ref -> unit
+
+val decr : int ref -> unit
+
+val print_stats : int -> unit

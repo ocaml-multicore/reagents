@@ -35,17 +35,15 @@ module Make(Sched: Scheduler.S)
 
   type mono_offer = Offer : 'a Offer.t -> mono_offer
 
-  open CAS.Sugar
-
   type 'a ref =
-    { data : 'a CAS.ref;
+    { data : 'a Cas.ref;
       offers : mono_offer MSQueue.t }
 
   type ('a,'b) reagent = ('a,'b) Reagent.t
 
   open Reagent
 
-  let mk_ref v = { data = CAS.ref v; offers = MSQueue.create () }
+  let mk_ref v = { data = Cas.ref v; offers = MSQueue.create () }
 
   let rec read : 'a 'r. 'a ref -> ('a,'r) reagent -> (unit,'r) reagent =
     fun r k ->
@@ -54,7 +52,7 @@ module Make(Sched: Scheduler.S)
           | None -> ()
           | Some ov -> MSQueue.push r.offers (Offer ov)
         in
-        let v = CAS.get r.data in
+        let v = Cas.get r.data in
         k.try_react v rx o
       in
         { always_commits = k.always_commits;
@@ -63,7 +61,7 @@ module Make(Sched: Scheduler.S)
 
   let read r = read r Reagent.commit
 
-  let read_imm r = CAS.get r.data
+  let read_imm r = Cas.get r.data
 
   let wake_all q =
     let rec loop () =
@@ -75,11 +73,11 @@ module Make(Sched: Scheduler.S)
   let rec cas : 'a 'r. 'a ref -> 'a -> 'a -> (unit, 'r) reagent -> (unit,'r) reagent =
     let try_react r expect update k () rx o =
       if can_cas_immediate k rx o then
-        if r.data <!= expect --> update then
+        if Cas.cas r.data expect update then
           ( wake_all r.offers; k.try_react () rx o )
         else Retry
       else
-        let c = PostCommitCAS.cas r.data expect update (fun () -> wake_all r.offers) in
+        let c = PostCommitCas.cas r.data expect update (fun () -> wake_all r.offers) in
         k.try_react () (Reaction.with_CAS rx c) o
     in
     fun r expect update k ->
@@ -90,16 +88,16 @@ module Make(Sched: Scheduler.S)
   let cas r e u = cas r e u Reagent.commit
 
   let cas_imm r expect update =
-    CAS.(commit @@ cas r.data {expect; update})
+    Cas.cas r.data expect update
 
   let rec upd : 'a 'b 'c 'r. 'a ref -> ('a -> 'b -> ('a * 'c) option) -> ('c,'r) reagent -> ('b,'r) reagent =
     let try_react r f k b rx o =
       if can_cas_immediate k rx o then
-        let ov = CAS.get r.data in
+        let ov = Cas.get r.data in
         match f ov b with
         | None -> Block
         | Some (nv, c) ->
-            if r.data <!= ov --> nv then
+            if Cas.cas r.data ov nv then
               ( wake_all r.offers; k.try_react c rx o )
             else Retry
       else
@@ -107,11 +105,11 @@ module Make(Sched: Scheduler.S)
           | None -> ()
           | Some ov -> MSQueue.push r.offers (Offer ov)
         in
-        let ov = CAS.get r.data in
+        let ov = Cas.get r.data in
         match f ov b with
         | None -> Block
         | Some (nv, c) ->
-            let cas = PostCommitCAS.cas r.data ov nv (fun () -> wake_all r.offers) in
+            let cas = PostCommitCas.cas r.data ov nv (fun () -> wake_all r.offers) in
             k.try_react c (Reaction.with_CAS rx cas) o
     in
     fun r f k ->

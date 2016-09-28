@@ -14,24 +14,24 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-type 'a ref = 'a CAS.ref
-let ref = CAS.ref
-let get = CAS.get
+type 'a ref = 'a Cas.ref
+let ref = Cas.ref
+let get = Cas.get
 
-type cas_kind = Real of CAS.t | Imm of bool
+type cas_kind = Real of Cas.t | Imm of bool
 
 type t = cas_kind * (unit -> unit)
 
-let cas r old_v new_v post_commit = (Real (CAS.cas r CAS.{expect = old_v; update = new_v}), post_commit)
+let cas r old_v new_v post_commit = (Real (Cas.mk_cas r old_v new_v), post_commit)
 
 let is_on_ref (c, _) r =
   match c with
-  | Real cas -> CAS.is_on_ref cas r
+  | Real cas -> Cas.is_on_ref cas r
   | _ -> false
 
 let commit (cas, post_commit) =
   match cas with
-  | Real cas -> if CAS.commit cas then Some post_commit else None
+  | Real cas -> if Cas.commit cas then Some post_commit else None
   | Imm v -> if v then Some post_commit else None
 
 let return v post_commit = (Imm v, post_commit)
@@ -45,6 +45,6 @@ let kCAS lst =
       | Real c -> (c::l1, pc >> l2, live)
       | Imm v -> (l1, pc >> l2, v && live)) ([],(fun () -> ()), true) lst
   in
-  if live && CAS.kCAS cas_list
+  if live && Cas.kCAS cas_list
   then Some (post_commit)
   else None

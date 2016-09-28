@@ -1,4 +1,4 @@
-open CAS
+open Cas
 
 let print_usage_and_exit () =
   print_endline @@ "Usage: " ^ Sys.argv.(0) ^ " <num_domains> <num_iters> <cas_length>";
@@ -30,7 +30,7 @@ let rec wait_till_done () =
 
 let verify () =
   let sum = Array.fold_left (fun acc a ->
-        acc + Array.fold_left (fun acc r -> acc + CAS.get r) 0 a) 0 arr
+        acc + Array.fold_left (fun acc r -> acc + Cas.get r) 0 a) 0 arr
   in
   if not (sum = num_doms * num_iters * cas_length) then
     Printf.printf "sum=%d expected=%d\n%!" sum (num_doms * num_iters * cas_length);
@@ -46,8 +46,8 @@ let core () =
       | 0 -> acc
       | n ->
         let (a,b) = Random.int 1024, Random.int 8 in
-        let v = CAS.get arr.(a).(b) in
-        prep ((cas arr.(a).(b) {expect = v; update = v+1})::acc) (n-1)
+        let v = Cas.get arr.(a).(b) in
+        prep ((mk_cas arr.(a).(b) v (v+1))::acc) (n-1)
     in
     let rec loop () =
       let res =
@@ -66,7 +66,7 @@ let _ =
   for i = 1 to num_doms - 1
   do Domain.spawn core done
 
-let _ = Pervasives.at_exit (fun () -> CAS.print_stats num_doms)
+let _ = Pervasives.at_exit (fun () -> Cas.print_stats num_doms)
 let _ = core ()
 let _ = wait_till_done ()
 let _ = verify ()

@@ -1,34 +1,37 @@
-TEST=test/swap_test.native test/ref_test.native test/counter_test.native \
-		 test/queue_test.native test/stack_test.native test/lock_test.native \
-		 test/dining_philosophers.native \
-		 test/rec_test.native test/tsx_test.native
-BENCH=test/reagent_queue.native test/hw_queue.native test/eli_stack.native \
-			test/trieber_stack.native
-FLAGS=-Is lib,data,sync -cflag -bin-annot -lib unix
+KIND=native
+TEST=test/swap_test.$(KIND) test/ref_test.$(KIND) test/counter_test.$(KIND) \
+		 test/queue_test.$(KIND) test/stack_test.$(KIND) test/lock_test.$(KIND) \
+		 test/dining_philosophers.$(KIND) test/rec_test.$(KIND) test/three_way.$(KIND) \
+		 test/two_way.$(KIND) test/ref_channel.$(KIND) test/sat.$(KIND) \
+		 test/swap_test2.$(KIND) test/stack_test_compose.$(KIND) test/tsx_test.$(KIND)
+BENCH=test/reagent_queue.$(KIND) test/hw_queue.$(KIND) test/eli_stack.$(KIND) \
+			test/trieber_stack.$(KIND)
+FLAGS=-Is lib,data,sync -cflag -bin-annot -lib unix -cflag -g
 BCFLAGS=-ocamlc ocamlcp -cflag -bin-annot -cflag -g -lflag -g $(FLAGS)
 BAFLAGS=-cflag -annot -cflag -g -lflag -g $(FLAGS)
+OCAMLBUILD=ocamlbuild
 
 all: reagents data sync tests
 
 reagents:
-	ocamlbuild $(FLAGS) Reagents.cma
+	$(OCAMLBUILD) $(FLAGS) Reagents.cma
 
 data: reagents
-	ocamlbuild $(FLAGS) Reagents_data.cma
+	$(OCAMLBUILD) $(FLAGS) Reagents_data.cma
 
 sync: reagents
-	ocamlbuild $(FLAGS) Reagents_sync.cma
+	$(OCAMLBUILD) $(FLAGS) Reagents_sync.cma
 
 tests:
-	ocamlbuild $(FLAGS) $(TEST)
+	$(OCAMLBUILD) $(FLAGS) $(TEST)
 
 bench-alloc:
-	ocamlbuild $(BAFLAGS) $(BENCH)
+	$(OCAMLBUILD) $(BAFLAGS) $(BENCH)
 
 bench-count:
-	ocamlbuild $(BCFLAGS) $(BENCH)
+	$(OCAMLBUILD) $(BCFLAGS) $(BENCH)
 
 clean:
-	ocamlbuild -clean
+	$(OCAMLBUILD) -clean
 	rm -f *.preprof *.prof *.dump
 	find . -name "*~" | xargs rm -f

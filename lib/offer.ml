@@ -22,13 +22,12 @@ module type S = sig
   val is_active  : 'a t -> bool
   val get_id     : 'a t -> int
   val wait       : 'a t -> unit
-  val complete   : 'a t -> 'a -> PostCommitCAS.t
+  val complete   : 'a t -> 'a -> PostCommitCas.t
   val rescind    : 'a t -> 'a option
   val get_result : 'a t -> 'a option
 end
 
 module Make (Sched : Scheduler.S) : S = struct
-  open CAS.Sugar
 
   type 'a status =
     | Empty
@@ -36,21 +35,21 @@ module Make (Sched : Scheduler.S) : S = struct
     | Rescinded
     | Completed of 'a
 
-  type 'a t = 'a status CAS.ref
+  type 'a t = 'a status Cas.ref
 
-  let make () = ref Empty
+  let make () = Cas.ref Empty
 
-  let get_id r = CAS.get_id r
+  let get_id r = Cas.get_id r
 
   let equal o1 o2 = get_id o1 = get_id o2
 
-  let is_active o = match !o with
+  let is_active o = match Cas.get o with
     | Empty | Waiting _ -> true
     | Rescinded | Completed _ -> false
 
   let wait r = Sched.suspend (fun k ->
     let cas_result =
-      CAS.map r (fun v ->
+      Cas.map r (fun v ->
         match v with
         | Empty -> Some (Waiting k)
         | Waiting _ -> failwith "Offer.wait(1)"
@@ -59,41 +58,41 @@ module Make (Sched : Scheduler.S) : S = struct
     match cas_result with
     (* If CAS was a success, then it is no longer this thread's responsibiliy to
      * resume itself. *)
-    | CAS.Success _ -> None
+    | Cas.Success _ -> None
     (* If the CAS failed, then another thread has already changed the offer from
      * [Empty] to [Completed] or [Rescinded]. In this case, thread shouldn't
      * wait. *)
-    | CAS.Aborted -> Some ()
-    | CAS.Failed  -> failwith "Offer.wait(2)")
+    | Cas.Aborted -> Some ()
+    | Cas.Failed  -> failwith "Offer.wait(2)")
 
   let complete r new_v =
-    let old_v = !r in
+    let old_v = Cas.get r in
     match old_v with
     | Waiting k ->
-        PostCommitCAS.cas r old_v (Completed new_v) (fun () -> Sched.resume k ())
+        PostCommitCas.cas r old_v (Completed new_v) (fun () -> Sched.resume k ())
     | Empty ->
-        PostCommitCAS.cas r old_v (Completed new_v) (fun () -> ())
-    | Rescinded | Completed _ -> PostCommitCAS.return false (fun () -> ())
+        PostCommitCas.cas r old_v (Completed new_v) (fun () -> ())
+    | Rescinded | Completed _ -> PostCommitCas.return false (fun () -> ())
 
   let rescind r =
     let cas_result =
-      CAS.map r (fun v ->
+      Cas.map r (fun v ->
         match v with
         | Empty | Waiting _ -> Some Rescinded
         | Rescinded | Completed _ -> None)
     in
     ( begin
         match cas_result with
-        | CAS.Success (Waiting t) -> Sched.resume t ()
+        | Cas.Success (Waiting t) -> Sched.resume t ()
         | _ -> ()
       end;
-      match !r with
+      match Cas.get r with
       | Rescinded -> None
       | Completed v -> Some v
       | _ -> failwith "Offer.rescind")
 
   let get_result r =
-    match !r with
+    match Cas.get r with
     | Completed v -> Some v
     | _ -> None
 end

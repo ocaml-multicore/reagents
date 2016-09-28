@@ -14,19 +14,27 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-module S = CAS.Sugar
+type 'a t = ('a list * 'a list) ref * bool Cas.ref
 
-type 'a t = ('a list * 'a list) ref * bool CAS.ref
+let max_iters = 100000
 
-let rec lock m =
-  if S.(<!=) m (S.(-->) false true) then ()
-  else lock m
+let rec lock m = function
+  | 0 -> 
+      begin
+        ignore (Unix.select [] [] [] 0.1);
+        lock m max_iters
+      end
+  | n -> 
+      if Cas.cas m false true then ()
+      else lock m (n - 1)
+
+let lock m = lock m max_iters
 
 let rec unlock m =
-  if S.(<!=) m (S.(-->) true false) then ()
+  if Cas.cas m true false then ()
   else unlock m
 
-let create () = (ref ([], []), S.ref false)
+let create () = (ref ([], []), Cas.ref false)
 
 let push (q,m) v =
   lock m;

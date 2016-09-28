@@ -24,18 +24,19 @@ module type S = sig
       compose : 'r. ('b,'r) t -> ('a,'r) t;
       always_commits : bool }
 
-  val never       : ('a,'b) t
-  val constant    : 'a -> ('b,'a) t
-  val post_commit : ('a -> unit) -> ('a, 'a) t
-  val lift        : ('a -> 'b option) -> ('a,'b) t
-  val computed    : ('a -> (unit, 'b) t) -> ('a,'b) t
-  val (>>=)       : ('a,'b) t -> ('b -> (unit,'c) t) -> ('a,'c) t
-  val (>>)        : ('a,'b) t -> ('b,'c) t -> ('a,'c) t
-  val choose      : ('a,'b) t -> ('a,'b) t -> ('a,'b) t
-  val (<+>)       : ('a,'b) t -> ('a,'b) t -> ('a,'b) t
-  val (<*>)       : ('a,'b) t -> ('a,'c) t -> ('a, 'b * 'c) t
-  val attempt     : ('a,'b) t -> ('a, 'b option) t
-  val run         : ('a,'b) t -> 'a -> 'b
+  val never         : ('a,'b) t
+  val constant      : 'a -> ('b,'a) t
+  val post_commit   : ('a -> unit) -> ('a, 'a) t
+  val lift          : ('a -> 'b) -> ('a,'b) t
+  val lift_blocking : ('a -> 'b option) -> ('a, 'b) t
+  val computed      : ('a -> (unit, 'b) t) -> ('a,'b) t
+  val (>>=)         : ('a,'b) t -> ('b -> (unit,'c) t) -> ('a,'c) t
+  val (>>)          : ('a,'b) t -> ('b,'c) t -> ('a,'c) t
+  val choose        : ('a,'b) t -> ('a,'b) t -> ('a,'b) t
+  val (<+>)         : ('a,'b) t -> ('a,'b) t -> ('a,'b) t
+  val (<*>)         : ('a,'b) t -> ('a,'c) t -> ('a, 'b * 'c) t
+  val attempt       : ('a,'b) t -> ('a, 'b option) t
+  val run           : ('a,'b) t -> 'a -> 'b
 
   val commit : ('a,'a) t
   val can_cas_immediate : ('a,'b) t -> reaction -> 'c offer option -> bool
@@ -103,8 +104,12 @@ module Make (Sched: Scheduler.S) : S
     let new_rx v rx = Reaction.with_post_commit rx (fun () -> f v) in
     mk_reagent {ret_val; new_rx} commit
 
+  let lift (f : 'a -> 'b) : ('a,'b) t =
+    let ret_val v = Done (f v) in
+    mk_reagent {ret_val; new_rx = (fun _ v -> v)} commit
+
   (* [f] should be a pure function *)
-  let lift (f : 'a -> 'b option) : ('a,'b) t =
+  let lift_blocking (f : 'a -> 'b option) : ('a,'b) t =
     let ret_val v =
       match f v with
       | None -> Block
@@ -149,14 +154,14 @@ module Make (Sched: Scheduler.S) : S
               end}
 
   let attempt (r : ('a,'b) t) : ('a,'b option) t =
-    choose (r >> lift (fun x -> Some (Some x))) (constant None)
+    choose (r >> lift (fun x -> (Some x))) (constant None)
 
   let (<+>) = choose
 
   let rec first : 'a 'b 'c 'r. ('a,'b) t -> ('b * 'c,'r) t -> ('a * 'c, 'r) t =
     fun r k ->
       let try_react (a,c) rx offer =
-        (r >> lift (fun b -> Some (b, c)) >> k).try_react a rx offer
+        (r >> lift (fun b -> (b, c)) >> k).try_react a rx offer
       in
       { always_commits = r.always_commits && k.always_commits;
         compose = (fun next -> first r (k.compose next));
@@ -167,7 +172,7 @@ module Make (Sched: Scheduler.S) : S
   let rec second : 'a 'b 'c 'r. ('a,'b) t -> ('c * 'b,'r) t -> ('c * 'a, 'r) t =
     fun r k ->
       let try_react (c,a) rx offer =
-        (r >> lift (fun b -> Some (c, b)) >> k).try_react a rx offer
+        (r >> lift (fun b -> (c, b)) >> k).try_react a rx offer
       in
       { always_commits = r.always_commits && k.always_commits;
         compose = (fun next -> second r (k.compose next));
@@ -176,7 +181,7 @@ module Make (Sched: Scheduler.S) : S
   let second (r : ('a,'b) t) : ('c * 'a, 'c * 'b) t = second r commit
 
   let (<*>) (r1 : ('a,'b) t) (r2 : ('a,'c) t) : ('a,'b*'c) t =
-    lift (fun a -> Some (a,a)) >> first (r1) >> second (r2)
+    lift (fun a -> (a,a)) >> first (r1) >> second (r2)
 
   let rec with_offer pause r v =
     let offer = Offer.make () in

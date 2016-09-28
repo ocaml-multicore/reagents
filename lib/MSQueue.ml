@@ -20,68 +20,67 @@
 (* TODO KC: Replace with concurrent lock free bag --
  * http://dl.acm.org/citation.cfm?id=1989550 *)
 
-open CAS.Sugar
-
 type 'a node =
   | Nil
-  | Next of 'a * 'a node CAS.ref
+  | Next of 'a * 'a node Cas.ref
 
 type 'a t =
-  { head : 'a node CAS.ref ;
-    tail : 'a node CAS.ref }
+  { head : 'a node Cas.ref ;
+    tail : 'a node Cas.ref }
 
 let create () =
-  let head = (Next (Obj.magic (), ref Nil)) in
-  { head = ref head ; tail = ref head }
+  let head = (Next (Obj.magic (), Cas.ref Nil)) in
+  { head = Cas.ref head ; tail = Cas.ref head }
 
 let is_empty q =
-  match !(q.head) with
+  match Cas.get q.head with
   | Nil -> failwith "MSQueue.is_empty: impossible"
   | Next (_,x) ->
-      ( match !x with
+      ( match Cas.get x with
         | Nil -> true
         | _ -> false )
 
 let pop q =
   let b = Backoff.create () in
   let rec loop () =
-    let s = !(q.head) in
+    let s = Cas.get q.head in
     let nhead = match s with
       | Nil -> failwith "MSQueue.pop: impossible"
-      | Next (_, x) -> !x
+      | Next (_, x) -> Cas.get x
     in match nhead with
      | Nil -> None
-     | Next (v, _) when (q.head <!= s --> nhead) -> Some v
+     | Next (v, _) when Cas.cas q.head s nhead -> Some v
      | _ -> ( Backoff.once b ; loop () )
   in loop ()
 
 let push q v =
   let rec find_tail_and_enq curr_end node =
-    if curr_end <!= (Nil --> node) then ()
-    else match !curr_end with
+    if Cas.cas curr_end Nil node then ()
+    else match Cas.get curr_end with
          | Nil -> find_tail_and_enq curr_end node
          | Next (_, n) -> find_tail_and_enq n node
   in
-  let newnode = Next (v, ref Nil) in
-  let tail = !(q.tail) in
+  let newnode = Next (v, Cas.ref Nil) in
+  let tail = Cas.get q.tail in
   match tail with
   | Nil         -> failwith "HW_MSQueue.push: impossible"
-  | Next (_, n) ->
-      ( find_tail_and_enq n newnode ;
-        ignore (q.tail <!= tail --> newnode) )
+  | Next (_, n) -> begin
+      find_tail_and_enq n newnode;
+      ignore (Cas.cas q.tail tail newnode)
+  end
 
 let rec clean_until q f =
   let b = Backoff.create () in
   let rec loop () =
-    let s = !(q.head) in
+    let s = Cas.get q.head in
     let nhead = match s with
       | Nil -> failwith "MSQueue.pop: impossible"
-      | Next (_, x) -> !x
+      | Next (_, x) -> Cas.get x
     in match nhead with
      | Nil -> ()
      | Next (v, _) ->
          if not (f v) then
-            if (q.head <!= s --> nhead)
+            if Cas.cas q.head s nhead
             then (Backoff.reset b; loop ())
             else (Backoff.once b; loop ())
          else ()
@@ -90,11 +89,11 @@ let rec clean_until q f =
 type 'a cursor = 'a node
 
 let snapshot q =
-  match !(q.head) with
+  match Cas.get q.head with
   | Nil -> failwith "MSQueue.snapshot: impossible"
-  | Next (_, n) -> !n
+  | Next (_, n) -> Cas.get n
 
 let next c =
   match c with
   | Nil -> None
-  | Next (a, n) -> Some (a, !n)
+  | Next (a, n) -> Some (a, Cas.get n)
