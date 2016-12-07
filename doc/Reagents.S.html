@@ -1,0 +1,43 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<link rel="stylesheet" href="style.css" type="text/css">
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+<link rel="Start" href="index.html">
+<link rel="previous" href="Reagents.Scheduler.html">
+<link rel="Up" href="Reagents.html">
+<link title="Index of types" rel=Appendix href="index_types.html">
+<link title="Index of values" rel=Appendix href="index_values.html">
+<link title="Index of modules" rel=Appendix href="index_modules.html">
+<link title="Index of module types" rel=Appendix href="index_module_types.html">
+<link title="Reagents" rel="Chapter" href="Reagents.html">
+<link title="Reagents_data" rel="Chapter" href="Reagents_data.html">
+<link title="Reagents_sync" rel="Chapter" href="Reagents_sync.html"><title>Reagents.S</title>
+</head>
+<body>
+<div class="navbar"><a class="pre" href="Reagents.Scheduler.html" title="Reagents.Scheduler">Previous</a>
+&nbsp;<a class="up" href="Reagents.html" title="Reagents">Up</a>
+&nbsp;</div>
+<h1>Module type <a href="type_Reagents.S.html">Reagents.S</a></h1>
+
+<pre><span class="keyword">module type</span> S = <code class="code"><span class="keyword">sig</span></code> <a href="Reagents.S.html">..</a> <code class="code"><span class="keyword">end</span></code></pre><hr width="100%">
+
+<pre><span id="TYPEt"><span class="keyword">type</span> <code class="type">('a, 'b)</code> t</span> </pre>
+
+
+<pre><span id="VALnever"><span class="keyword">val</span> never</span> : <code class="type">('a, 'b) <a href="Reagents.S.html#TYPEt">t</a></code></pre>
+<pre><span id="VALconstant"><span class="keyword">val</span> constant</span> : <code class="type">'a -> ('b, 'a) <a href="Reagents.S.html#TYPEt">t</a></code></pre>
+<pre><span id="VALpost_commit"><span class="keyword">val</span> post_commit</span> : <code class="type">('a -> unit) -> ('a, 'a) <a href="Reagents.S.html#TYPEt">t</a></code></pre>
+<pre><span id="VALlift"><span class="keyword">val</span> lift</span> : <code class="type">('a -> 'b) -> ('a, 'b) <a href="Reagents.S.html#TYPEt">t</a></code></pre>
+<pre><span id="VALlift_blocking"><span class="keyword">val</span> lift_blocking</span> : <code class="type">('a -> 'b option) -> ('a, 'b) <a href="Reagents.S.html#TYPEt">t</a></code></pre>
+<pre><span id="VALcomputed"><span class="keyword">val</span> computed</span> : <code class="type">('a -> (unit, 'b) <a href="Reagents.S.html#TYPEt">t</a>) -> ('a, 'b) <a href="Reagents.S.html#TYPEt">t</a></code></pre>
+<pre><span id="VAL(>>=)"><span class="keyword">val</span> (&gt;&gt;=)</span> : <code class="type">('a, 'b) <a href="Reagents.S.html#TYPEt">t</a> -><br>       ('b -> (unit, 'c) <a href="Reagents.S.html#TYPEt">t</a>) -> ('a, 'c) <a href="Reagents.S.html#TYPEt">t</a></code></pre>
+<pre><span id="VAL(>>)"><span class="keyword">val</span> (&gt;&gt;)</span> : <code class="type">('a, 'b) <a href="Reagents.S.html#TYPEt">t</a> -> ('b, 'c) <a href="Reagents.S.html#TYPEt">t</a> -> ('a, 'c) <a href="Reagents.S.html#TYPEt">t</a></code></pre>
+<pre><span id="VALchoose"><span class="keyword">val</span> choose</span> : <code class="type">('a, 'b) <a href="Reagents.S.html#TYPEt">t</a> -> ('a, 'b) <a href="Reagents.S.html#TYPEt">t</a> -> ('a, 'b) <a href="Reagents.S.html#TYPEt">t</a></code></pre>
+<pre><span id="VAL(<+>)"><span class="keyword">val</span> (&lt;+&gt;)</span> : <code class="type">('a, 'b) <a href="Reagents.S.html#TYPEt">t</a> -> ('a, 'b) <a href="Reagents.S.html#TYPEt">t</a> -> ('a, 'b) <a href="Reagents.S.html#TYPEt">t</a></code></pre>
+<pre><span id="VAL(<*>)"><span class="keyword">val</span> (&lt;*&gt;)</span> : <code class="type">('a, 'b) <a href="Reagents.S.html#TYPEt">t</a> -> ('a, 'c) <a href="Reagents.S.html#TYPEt">t</a> -> ('a, 'b * 'c) <a href="Reagents.S.html#TYPEt">t</a></code></pre>
+<pre><span id="VALattempt"><span class="keyword">val</span> attempt</span> : <code class="type">('a, 'b) <a href="Reagents.S.html#TYPEt">t</a> -> ('a, 'b option) <a href="Reagents.S.html#TYPEt">t</a></code></pre>
+<pre><span id="VALrun"><span class="keyword">val</span> run</span> : <code class="type">('a, 'b) <a href="Reagents.S.html#TYPEt">t</a> -> 'a -> 'b</code></pre>
+<pre><span id="VALget_tid"><span class="keyword">val</span> get_tid</span> : <code class="type">unit -> int</code></pre>
+<pre><span class="keyword">module</span> <a href="Reagents.S.Ref.html">Ref</a>: <code class="type">Ref.S</code><code class="type">  with type ('a,'b) reagent = ('a,'b) t</code></pre>
+<pre><span class="keyword">module</span> <a href="Reagents.S.Channel.html">Channel</a>: <code class="type">Channel.S</code><code class="type">  with type ('a,'b) reagent = ('a,'b) t</code></pre></body></html>
