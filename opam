@@ -1,0 +1,21 @@
+opam-version: "1.2"
+maintainer: "KC Sivaramakrishnan <sk826@cl.cam.ac.uk>"
+authors: ["KC Sivaramakrishnan <sk826@cl.cam.ac.uk>"]
+homepage: "https://github.com/kayceesrk/reagents"
+doc: "https://kayceesrk.github.io/reagents/doc"
+license: "ISC"
+dev-repo: "https://github.com/kayceesrk/reagents.git"
+bug-reports: "https://github.com/kayceesrk/reagents/issues"
+tags: []
+available: [ ocaml-version >= "4.02.2"]
+depends: [
+  "ocamlfind" {build}
+  "ocamlbuild" {build}
+  "topkg" {build} 
+	"lockfree" {>= "0.1.0"}
+	"kcas" {>= "0.1.2"}
+]
+depopts: []
+build: [
+  "ocaml" "pkg/pkg.ml" "build"
+          "--pinned" pinned ]

@@ -1,0 +1,7 @@
+description = "Composable lock-free data and synchronization structures"
+version = "%%VERSION_NUM%%"
+requires = "kcas lockfree"
+archive(byte) = "reagents.cma"
+archive(native) = "reagents.cmxa"
+plugin(byte) = "reagents.cma"
+plugin(native) = "reagents.cmxs"
