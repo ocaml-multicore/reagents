@@ -102,6 +102,6 @@ module Make(Sched: Scheduler.S)
 
   let upd r f = upd r f Reagent.commit
 
-  let cas r expect update = upd r (fun current ->
-    if current = expect then Some update else None)
+  let cas r expect update = upd r (fun current () ->
+    if current = expect then Some (update, ()) else None)
 end
