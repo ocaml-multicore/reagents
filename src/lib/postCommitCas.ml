@@ -18,7 +18,9 @@ type 'a ref = 'a Kcas.ref
 let ref = Kcas.ref
 let get = Kcas.get
 
-type cas_kind = Real of Kcas.t | Imm of bool
+type cas_kind = 
+  | Real of Kcas.t 
+  | Imm of bool
 
 type t = cas_kind * (unit -> unit)
 

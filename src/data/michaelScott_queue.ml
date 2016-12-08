@@ -64,10 +64,10 @@ module Make (Reagents: Reagents.S) : S
         let s = Ref.read_imm r in
         let fwd_tail nv () = ignore @@ Ref.cas_imm tail ov nv in
         match s with
-        | Nil -> Ref.cas r s n >> post_commit (fwd_tail n)
+        | Nil -> Ref.cas r s n >>> post_commit (fwd_tail n)
         | Next (_,_) as nv -> ( fwd_tail nv (); find_and_enq n tail )
 
-  let push q = computed (fun x ->
+  let push q = return (fun x ->
     let new_node = Next (x, Ref.mk_ref Nil) in
     find_and_enq new_node q.tail)
 end

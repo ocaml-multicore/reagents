@@ -18,5 +18,5 @@ module Make (Reagents : Reagents.S) : S
   let create = C.create
   let get_count = C.get
   let count_down c = C.try_dec c >>= (fun _ -> constant ())
-  let await c = C.get c >> lift_blocking (fun v -> if v = 0 then Some () else None)
+  let await c = C.get c >>> lift_blocking (fun v -> if v = 0 then Some () else None)
 end

@@ -30,10 +30,9 @@ module type S = sig
   val post_commit   : ('a -> unit) -> ('a, 'a) t
   val lift          : ('a -> 'b) -> ('a,'b) t
   val lift_blocking : ('a -> 'b option) -> ('a,'b) t
-  val computed      : ('a -> (unit, 'b) t) -> ('a,'b) t
+  val return        : ('a -> (unit, 'b) t) -> ('a,'b) t
   val (>>=)         : ('a,'b) t -> ('b -> (unit,'c) t) -> ('a,'c) t
-  val (>>)          : ('a,'b) t -> ('b,'c) t -> ('a,'c) t
-  val choose        : ('a,'b) t -> ('a,'b) t -> ('a,'b) t
+  val (>>>)         : ('a,'b) t -> ('b,'c) t -> ('a,'c) t
   val (<+>)         : ('a,'b) t -> ('a,'b) t -> ('a,'b) t
   val (<*>)         : ('a,'b) t -> ('a,'c) t -> ('a, 'b * 'c) t
   val attempt       : ('a,'b) t -> ('a, 'b option) t

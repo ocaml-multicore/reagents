@@ -27,7 +27,7 @@ let mk_tw_chan () =
   (a_p, b_p), (a_m, b_m)
 
 let tw_swap (c1, c2) =
-  swap c1 >> swap c2
+  swap c1 >>> swap c2
 
 let work sw v () =
   let x = run (tw_swap sw) v in

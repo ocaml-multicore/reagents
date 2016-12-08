@@ -5,7 +5,7 @@ open Scheduler
 open Reagents
 
 module Sync = Reagents_sync.Make(Reagents)
-module RLock = Sync.Recursive_lock
+module RLock = Sync.Recursive_lock(Scheduler)
 module CDL = Sync.Countdown_latch
 
 let flip f a b = f b a
