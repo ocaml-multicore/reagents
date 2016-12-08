@@ -29,10 +29,9 @@ module type S = sig
   val post_commit   : ('a -> unit) -> ('a, 'a) t
   val lift          : ('a -> 'b) -> ('a,'b) t
   val lift_blocking : ('a -> 'b option) -> ('a, 'b) t
-  val computed      : ('a -> (unit, 'b) t) -> ('a,'b) t
+  val return        : ('a -> (unit, 'b) t) -> ('a,'b) t
   val (>>=)         : ('a,'b) t -> ('b -> (unit,'c) t) -> ('a,'c) t
-  val (>>)          : ('a,'b) t -> ('b,'c) t -> ('a,'c) t
-  val choose        : ('a,'b) t -> ('a,'b) t -> ('a,'b) t
+  val (>>>)         : ('a,'b) t -> ('b,'c) t -> ('a,'c) t
   val (<+>)         : ('a,'b) t -> ('a,'b) t -> ('a,'b) t
   val (<*>)         : ('a,'b) t -> ('a,'c) t -> ('a, 'b * 'c) t
   val attempt       : ('a,'b) t -> ('a, 'b option) t
@@ -60,7 +59,7 @@ module Make (Sched: Scheduler.S) : S
       always_commits : bool }
 
 
-  let (>>) r1 r2 = r1.compose r2
+  let (>>>) r1 r2 = r1.compose r2
 
   let rec never : 'a 'b. ('a,'b) t =
     { try_react = (fun _ _ _ -> Block);
@@ -117,20 +116,20 @@ module Make (Sched: Scheduler.S) : S
     in
     mk_reagent {ret_val; new_rx = (fun _ v -> v)} commit
 
-  let rec computed : 'a 'b 'r. ('a -> (unit, 'b) t) -> ('b, 'r) t -> ('a, 'r) t =
+  let rec return : 'a 'b 'r. ('a -> (unit, 'b) t) -> ('b, 'r) t -> ('a, 'r) t =
     fun f k ->
       { always_commits = false;
-        compose = (fun next -> computed f (k.compose next));
+        compose = (fun next -> return f (k.compose next));
         try_react = (fun a rx o -> ((f a).compose k).try_react () rx o) }
 
-  let computed f = computed f commit
+  let return f = return f commit
 
-  let (>>=) r f = r >> (computed f)
+  let (>>=) r f = r >>> (return f)
 
-  let rec choose : 'a 'b 'r. ('a,'b) t -> ('a,'b) t -> ('a,'b) t =
+  let rec (<+>) : 'a 'b 'r. ('a,'b) t -> ('a,'b) t -> ('a,'b) t =
     fun r1 r2 ->
       { always_commits = r1.always_commits && r2.always_commits;
-        compose = (fun next -> choose (r1.compose next) (r2.compose next));
+        compose = (fun next -> r1.compose next <+> r2.compose next);
         try_react = fun a rx offer ->
           match r1.try_react a rx offer with
           | (Done _) as v -> v
@@ -154,14 +153,12 @@ module Make (Sched: Scheduler.S) : S
               end}
 
   let attempt (r : ('a,'b) t) : ('a,'b option) t =
-    choose (r >> lift (fun x -> (Some x))) (constant None)
-
-  let (<+>) = choose
+    (<+>) (r >>> lift (fun x -> (Some x))) (constant None)
 
   let rec first : 'a 'b 'c 'r. ('a,'b) t -> ('b * 'c,'r) t -> ('a * 'c, 'r) t =
     fun r k ->
       let try_react (a,c) rx offer =
-        (r >> lift (fun b -> (b, c)) >> k).try_react a rx offer
+        (r >>> lift (fun b -> (b, c)) >>> k).try_react a rx offer
       in
       { always_commits = r.always_commits && k.always_commits;
         compose = (fun next -> first r (k.compose next));
@@ -172,7 +169,7 @@ module Make (Sched: Scheduler.S) : S
   let rec second : 'a 'b 'c 'r. ('a,'b) t -> ('c * 'b,'r) t -> ('c * 'a, 'r) t =
     fun r k ->
       let try_react (c,a) rx offer =
-        (r >> lift (fun b -> (c, b)) >> k).try_react a rx offer
+        (r >>> lift (fun b -> (c, b)) >>> k).try_react a rx offer
       in
       { always_commits = r.always_commits && k.always_commits;
         compose = (fun next -> second r (k.compose next));
@@ -181,7 +178,7 @@ module Make (Sched: Scheduler.S) : S
   let second (r : ('a,'b) t) : ('c * 'a, 'c * 'b) t = second r commit
 
   let (<*>) (r1 : ('a,'b) t) (r2 : ('a,'c) t) : ('a,'b*'c) t =
-    lift (fun a -> (a,a)) >> first (r1) >> second (r2)
+    lift (fun a -> (a,a)) >>> first (r1) >>> second (r2)
 
   let rec with_offer pause r v =
     let offer = Offer.make () in

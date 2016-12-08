@@ -28,7 +28,7 @@ module Make (Reagents: Reagents.S) (Lock : Lock.S with type ('a,'b) reagent = ('
 
   let wait l cv =
     let x = X.create () in
-    run (constant x >> Q.push cv) ();
+    run (constant x >>> Q.push cv) ();
     if run (Lock.rel l) () then
       (* Successfully released lock. Wait for signal.. *)
       ( run (X.exchange x) ();

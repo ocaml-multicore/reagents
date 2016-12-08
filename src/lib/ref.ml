@@ -70,23 +70,6 @@ module Make(Sched: Scheduler.S)
       | Some (Offer ov) -> ( ignore (Offer.rescind ov); loop () )
     in loop ()
 
-  let rec cas : 'a 'r. 'a ref -> 'a -> 'a -> (unit, 'r) reagent -> (unit,'r) reagent =
-    let try_react r expect update k () rx o =
-      if can_cas_immediate k rx o then
-        if Kcas.cas r.data expect update then
-          ( wake_all r.offers; k.try_react () rx o )
-        else Retry
-      else
-        let c = PostCommitCas.cas r.data expect update (fun () -> wake_all r.offers) in
-        k.try_react () (Reaction.with_CAS rx c) o
-    in
-    fun r expect update k ->
-      { always_commits = false;
-        compose = (fun next -> cas r expect update (k.compose next));
-        try_react = try_react r expect update k}
-
-  let cas r e u = cas r e u Reagent.commit
-
   let cas_imm r expect update =
     Kcas.cas r.data expect update
 
@@ -118,4 +101,7 @@ module Make(Sched: Scheduler.S)
         try_react = try_react r f k}
 
   let upd r f = upd r f Reagent.commit
+
+  let cas r expect update = upd r (fun current ->
+    if current = expect then Some update else None)
 end

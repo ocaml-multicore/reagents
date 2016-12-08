@@ -29,9 +29,9 @@ let main () =
   let (a,b) = mk_chan () in
   let r = mk_ref 0 in
   fork (fun () -> 
-    run (swap a >> 
+    run (swap a >>> 
          upd r (fun _ () -> Some (1, ()))) ());
-  run (swap b >> 
+  run (swap b >>> 
        upd r (fun _ () -> Some (2, ()))) ()
 
 let () = Scheduler.run main

@@ -10,7 +10,8 @@ module type S = sig
   val try_acq : t -> (unit, bool) reagent
 end
 
-module Make (Reagents: Reagents.S) : S
+module Make (Reagents: Reagents.S) 
+            (Tid : sig val get_tid : unit -> int end) : S
   with type ('a,'b) reagent = ('a,'b) Reagents.t = struct
 
   type ('a,'b) reagent = ('a,'b) Reagents.t
@@ -28,7 +29,7 @@ module Make (Reagents: Reagents.S) : S
   let create () = Ref.mk_ref Unlocked
 
   let acq r = Ref.upd r (fun s () ->
-    let tid = Reagents.get_tid () in
+    let tid = Tid.get_tid () in
     match s with
     | Unlocked ->
        (* No current owner, take the lock *)
@@ -42,7 +43,7 @@ module Make (Reagents: Reagents.S) : S
        end)
 
   let rel r = Ref.upd r (fun s () ->
-    let tid = Reagents.get_tid () in
+    let tid = Tid.get_tid () in
     match s with
     | Unlocked -> Some (Unlocked, false)
     | Locked (owner, count) ->
@@ -58,7 +59,7 @@ module Make (Reagents: Reagents.S) : S
        end)
 
   let try_acq r = Ref.upd r (fun s () ->
-    let tid = Reagents.get_tid () in
+    let tid = Tid.get_tid () in
     match s with
     | Unlocked -> Some (Locked (tid, 1), true)
     | Locked (owner, count) ->

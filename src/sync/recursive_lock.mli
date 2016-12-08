@@ -10,5 +10,5 @@ module type S = sig
   val try_acq : t -> (unit, bool) reagent
 end
 
-module Make (Reagents: Reagents.S) : S
+module Make (Reagents: Reagents.S) (Tid : sig val get_tid : unit -> int end) : S
   with type ('a,'b) reagent = ('a,'b) Reagents.t
