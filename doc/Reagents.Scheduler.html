@@ -23,8 +23,24 @@
 <pre><span class="keyword">module type</span> Scheduler = <code class="code"><span class="keyword">sig</span></code> <a href="Reagents.Scheduler.html">..</a> <code class="code"><span class="keyword">end</span></code></pre><hr width="100%">
 
 <pre><span id="TYPEcont"><span class="keyword">type</span> <code class="type">'a</code> cont</span> </pre>
+<div class="info ">
+The type of continuation.<br>
+</div>
 
 
-<pre><span id="VALsuspend"><span class="keyword">val</span> suspend</span> : <code class="type">('a <a href="Reagents.Scheduler.html#TYPEcont">cont</a> -> 'a option) -> 'a</code></pre>
-<pre><span id="VALresume"><span class="keyword">val</span> resume</span> : <code class="type">'a <a href="Reagents.Scheduler.html#TYPEcont">cont</a> -> 'a -> unit</code></pre>
-<pre><span id="VALget_tid"><span class="keyword">val</span> get_tid</span> : <code class="type">unit -> int</code></pre></body></html>
+<pre><span id="VALsuspend"><span class="keyword">val</span> suspend</span> : <code class="type">('a <a href="Reagents.Scheduler.html#TYPEcont">cont</a> -> 'a option) -> 'a</code></pre><div class="info ">
+<code class="code">suspend f</code> applies <code class="code">f</code> to the current continuation. If <code class="code">f</code> returns
+      <code class="code"><span class="constructor">Some</span> v</code>, then the function returns <code class="code">v</code> immediately.  Otherwise, if <code class="code">f</code>
+      returns <code class="code"><span class="constructor">None</span></code>, then the current fiber is suspended and the control
+      switches to the next fiber from the scheduler.<br>
+</div>
+
+<pre><span id="VALresume"><span class="keyword">val</span> resume</span> : <code class="type">'a <a href="Reagents.Scheduler.html#TYPEcont">cont</a> -> 'a -> unit</code></pre><div class="info ">
+<code class="code">resume k v</code> prepares to resume the continuation <code class="code">k</code> with value <code class="code">v</code> and
+      enqueues the continuation to the scheduler queue.<br>
+</div>
+
+<pre><span id="VALget_tid"><span class="keyword">val</span> get_tid</span> : <code class="type">unit -> int</code></pre><div class="info ">
+Return the current thread id.<br>
+</div>
+</body></html>

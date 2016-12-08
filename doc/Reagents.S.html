@@ -23,21 +23,74 @@
 <pre><span class="keyword">module type</span> S = <code class="code"><span class="keyword">sig</span></code> <a href="Reagents.S.html">..</a> <code class="code"><span class="keyword">end</span></code></pre><hr width="100%">
 
 <pre><span id="TYPEt"><span class="keyword">type</span> <code class="type">('a, 'b)</code> t</span> </pre>
+<div class="info ">
+The type of a reagent computation which accepts a value of type <code class="code"><span class="keywordsign">'</span>a</code> and
+      returns a value of type <code class="code"><span class="keywordsign">'</span>b</code>.<br>
+</div>
 
 
-<pre><span id="VALnever"><span class="keyword">val</span> never</span> : <code class="type">('a, 'b) <a href="Reagents.S.html#TYPEt">t</a></code></pre>
-<pre><span id="VALconstant"><span class="keyword">val</span> constant</span> : <code class="type">'a -> ('b, 'a) <a href="Reagents.S.html#TYPEt">t</a></code></pre>
-<pre><span id="VALpost_commit"><span class="keyword">val</span> post_commit</span> : <code class="type">('a -> unit) -> ('a, 'a) <a href="Reagents.S.html#TYPEt">t</a></code></pre>
-<pre><span id="VALlift"><span class="keyword">val</span> lift</span> : <code class="type">('a -> 'b) -> ('a, 'b) <a href="Reagents.S.html#TYPEt">t</a></code></pre>
-<pre><span id="VALlift_blocking"><span class="keyword">val</span> lift_blocking</span> : <code class="type">('a -> 'b option) -> ('a, 'b) <a href="Reagents.S.html#TYPEt">t</a></code></pre>
-<pre><span id="VALcomputed"><span class="keyword">val</span> computed</span> : <code class="type">('a -> (unit, 'b) <a href="Reagents.S.html#TYPEt">t</a>) -> ('a, 'b) <a href="Reagents.S.html#TYPEt">t</a></code></pre>
-<pre><span id="VAL(>>=)"><span class="keyword">val</span> (&gt;&gt;=)</span> : <code class="type">('a, 'b) <a href="Reagents.S.html#TYPEt">t</a> -><br>       ('b -> (unit, 'c) <a href="Reagents.S.html#TYPEt">t</a>) -> ('a, 'c) <a href="Reagents.S.html#TYPEt">t</a></code></pre>
-<pre><span id="VAL(>>)"><span class="keyword">val</span> (&gt;&gt;)</span> : <code class="type">('a, 'b) <a href="Reagents.S.html#TYPEt">t</a> -> ('b, 'c) <a href="Reagents.S.html#TYPEt">t</a> -> ('a, 'c) <a href="Reagents.S.html#TYPEt">t</a></code></pre>
-<pre><span id="VALchoose"><span class="keyword">val</span> choose</span> : <code class="type">('a, 'b) <a href="Reagents.S.html#TYPEt">t</a> -> ('a, 'b) <a href="Reagents.S.html#TYPEt">t</a> -> ('a, 'b) <a href="Reagents.S.html#TYPEt">t</a></code></pre>
-<pre><span id="VAL(<+>)"><span class="keyword">val</span> (&lt;+&gt;)</span> : <code class="type">('a, 'b) <a href="Reagents.S.html#TYPEt">t</a> -> ('a, 'b) <a href="Reagents.S.html#TYPEt">t</a> -> ('a, 'b) <a href="Reagents.S.html#TYPEt">t</a></code></pre>
-<pre><span id="VAL(<*>)"><span class="keyword">val</span> (&lt;*&gt;)</span> : <code class="type">('a, 'b) <a href="Reagents.S.html#TYPEt">t</a> -> ('a, 'c) <a href="Reagents.S.html#TYPEt">t</a> -> ('a, 'b * 'c) <a href="Reagents.S.html#TYPEt">t</a></code></pre>
-<pre><span id="VALattempt"><span class="keyword">val</span> attempt</span> : <code class="type">('a, 'b) <a href="Reagents.S.html#TYPEt">t</a> -> ('a, 'b option) <a href="Reagents.S.html#TYPEt">t</a></code></pre>
-<pre><span id="VALrun"><span class="keyword">val</span> run</span> : <code class="type">('a, 'b) <a href="Reagents.S.html#TYPEt">t</a> -> 'a -> 'b</code></pre>
-<pre><span id="VALget_tid"><span class="keyword">val</span> get_tid</span> : <code class="type">unit -> int</code></pre>
-<pre><span class="keyword">module</span> <a href="Reagents.S.Ref.html">Ref</a>: <code class="type">Ref.S</code><code class="type">  with type ('a,'b) reagent = ('a,'b) t</code></pre>
-<pre><span class="keyword">module</span> <a href="Reagents.S.Channel.html">Channel</a>: <code class="type">Channel.S</code><code class="type">  with type ('a,'b) reagent = ('a,'b) t</code></pre></body></html>
+<pre><span id="VALnever"><span class="keyword">val</span> never</span> : <code class="type">('a, 'b) <a href="Reagents.S.html#TYPEt">t</a></code></pre><div class="info ">
+A reagent that is never enabled.<br>
+</div>
+
+<pre><span id="VALconstant"><span class="keyword">val</span> constant</span> : <code class="type">'a -> ('b, 'a) <a href="Reagents.S.html#TYPEt">t</a></code></pre><div class="info ">
+<code class="code">constant v</code> is a reagent that always returns <code class="code">v</code>.<br>
+</div>
+
+<pre><span id="VALpost_commit"><span class="keyword">val</span> post_commit</span> : <code class="type">('a -> unit) -> ('a, 'a) <a href="Reagents.S.html#TYPEt">t</a></code></pre><div class="info ">
+<code class="code">post_commit f</code> returns a reagent <code class="code">r</code> that runs <code class="code">f r</code> after the reagent
+      <code class="code">r</code> (or any reagent constructed using <code class="code">r</code>) commits.<br>
+</div>
+
+<pre><span id="VALlift"><span class="keyword">val</span> lift</span> : <code class="type">('a -> 'b) -> ('a, 'b) <a href="Reagents.S.html#TYPEt">t</a></code></pre><div class="info ">
+<code class="code">lift f</code> lifts a pure function <code class="code">f</code> to a reagent. If <code class="code">f</code> includes
+      side-effects, then the side-effects may be performed zero or more times.
+      It is expected that <code class="code">f</code> does not perform any blocking operations.<br>
+</div>
+
+<pre><span id="VALlift_blocking"><span class="keyword">val</span> lift_blocking</span> : <code class="type">('a -> 'b option) -> ('a, 'b) <a href="Reagents.S.html#TYPEt">t</a></code></pre><div class="info ">
+<code class="code">lift_blocking f</code> blocks if <code class="code">f</code> returns <code class="code"><span class="constructor">None</span></code>. Otherwise, it behaves
+      like <a href="Reagents.S.html#VALlift"><code class="code"><span class="constructor">Reagents</span>.<span class="constructor">S</span>.lift</code></a>.<br>
+</div>
+
+<pre><span id="VALreturn"><span class="keyword">val</span> return</span> : <code class="type">('a -> (unit, 'b) <a href="Reagents.S.html#TYPEt">t</a>) -> ('a, 'b) <a href="Reagents.S.html#TYPEt">t</a></code></pre><div class="info ">
+The monadic return primitive for reagents.<br>
+</div>
+
+<pre><span id="VAL(>>=)"><span class="keyword">val</span> (&gt;&gt;=)</span> : <code class="type">('a, 'b) <a href="Reagents.S.html#TYPEt">t</a> -><br>       ('b -> (unit, 'c) <a href="Reagents.S.html#TYPEt">t</a>) -> ('a, 'c) <a href="Reagents.S.html#TYPEt">t</a></code></pre><div class="info ">
+The monadic bind primitive for reagents.<br>
+</div>
+
+<pre><span id="VAL(>>>)"><span class="keyword">val</span> (&gt;&gt;&gt;)</span> : <code class="type">('a, 'b) <a href="Reagents.S.html#TYPEt">t</a> -> ('b, 'c) <a href="Reagents.S.html#TYPEt">t</a> -> ('a, 'c) <a href="Reagents.S.html#TYPEt">t</a></code></pre><div class="info ">
+The sequential composition operator. <code class="code">a &gt;&gt;&gt; b</code> perform <code class="code">a</code> and <code class="code">b</code>
+      atomically. Corresponds to arrow bind.<br>
+</div>
+
+<pre><span id="VAL(<+>)"><span class="keyword">val</span> (&lt;+&gt;)</span> : <code class="type">('a, 'b) <a href="Reagents.S.html#TYPEt">t</a> -> ('a, 'b) <a href="Reagents.S.html#TYPEt">t</a> -> ('a, 'b) <a href="Reagents.S.html#TYPEt">t</a></code></pre><div class="info ">
+Left-biased choice. <code class="code">a &lt;+&gt; b</code> first attempts <code class="code">a</code>. If <code class="code">a</code> blocks, then <code class="code">b</code>
+      is attempted. If both of them block, then the whole protocol blocks.<br>
+</div>
+
+<pre><span id="VAL(<*>)"><span class="keyword">val</span> (&lt;*&gt;)</span> : <code class="type">('a, 'b) <a href="Reagents.S.html#TYPEt">t</a> -> ('a, 'c) <a href="Reagents.S.html#TYPEt">t</a> -> ('a, 'b * 'c) <a href="Reagents.S.html#TYPEt">t</a></code></pre><div class="info ">
+Parallel composition operator. <code class="code">a &lt;*&gt; b</code> is only enabled if both <code class="code">a</code> and
+      <code class="code">b</code> are enabled.<br>
+</div>
+
+<pre><span id="VALattempt"><span class="keyword">val</span> attempt</span> : <code class="type">('a, 'b) <a href="Reagents.S.html#TYPEt">t</a> -> ('a, 'b option) <a href="Reagents.S.html#TYPEt">t</a></code></pre><div class="info ">
+Convert a blocking reagent into a non-blocking one. If reagent <code class="code">r</code> is a
+      blocks, then <code class="code">attempt r</code> return <code class="code"><span class="constructor">None</span></code>. If <code class="code">r</code> does not block and returns
+      a value <code class="code">v</code>, then <code class="code">attempt r</code> returns <code class="code"><span class="constructor">Some</span> v</code>.<br>
+</div>
+
+<pre><span id="VALrun"><span class="keyword">val</span> run</span> : <code class="type">('a, 'b) <a href="Reagents.S.html#TYPEt">t</a> -> 'a -> 'b</code></pre><div class="info ">
+<code class="code">run r v</code> runs the reagents <code class="code">r</code> with value <code class="code">v</code>.<br>
+</div>
+
+<pre><span class="keyword">module</span> <a href="Reagents.S.Ref.html">Ref</a>: <code class="type">Ref.S</code><code class="type">  with type ('a,'b) reagent = ('a,'b) t</code></pre><div class="info">
+Shared memory references.
+</div>
+
+<pre><span class="keyword">module</span> <a href="Reagents.S.Channel.html">Channel</a>: <code class="type">Channel.S</code><code class="type">  with type ('a,'b) reagent = ('a,'b) t</code></pre><div class="info">
+Synchronous message-passing channels.
+</div>
+</body></html>

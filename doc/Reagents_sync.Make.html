@@ -37,7 +37,9 @@
 <pre><span class="keyword">module</span> <a href="Reagents_sync.Make.Countdown_latch.html">Countdown_latch</a>: <code class="type">Countdown_latch.S</code><code class="type">  with type ('a,'b) reagent = ('a,'b) R.t</code></pre>
 <pre><span class="keyword">module</span> <a href="Reagents_sync.Make.Exchanger.html">Exchanger</a>: <code class="type">Exchanger.S</code><code class="type">  with type ('a,'b) reagent = ('a,'b) R.t</code></pre>
 <pre><span class="keyword">module</span> <a href="Reagents_sync.Make.Lock.html">Lock</a>: <code class="type">Lock.S</code><code class="type">  with type ('a,'b) reagent = ('a,'b) R.t</code></pre>
-<pre><span class="keyword">module</span> <a href="Reagents_sync.Make.Recursive_lock.html">Recursive_lock</a>: <code class="type">Recursive_lock.S</code><code class="type">  with type ('a,'b) reagent = ('a,'b) R.t</code></pre>
+<pre><span class="keyword">module</span> <a href="Reagents_sync.Make.Recursive_lock.html">Recursive_lock</a>: <div class="sig_block"><code class="code"><span class="keyword">functor</span> (</code><code class="code"><span class="constructor">Tid</span></code><code class="code"> : </code><code class="code"><span class="keyword">sig</span></code><div class="sig_block">
+<pre><span id="VALget_tid"><span class="keyword">val</span> get_tid</span> : <code class="type">unit -> int</code></pre></div><code class="code"><span class="keyword">end</span></code><code class="code">) <span class="keywordsign">-&gt;</span> </code><code class="type">Recursive_lock.S</code><code class="type">  
+    with type ('a,'b) reagent = ('a,'b) R.t</code></div></pre>
 <pre><span class="keyword">module</span> <a href="Reagents_sync.Make.Condition_variable.html">Condition_variable</a>: <code class="type">Condition_variable.S</code><code class="type">  
     with type ('a,'b) reagent = ('a,'b) R.t
      and type lock  = Lock.t</code></pre></body></html>

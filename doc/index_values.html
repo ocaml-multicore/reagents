@@ -18,47 +18,90 @@
 <table>
 <tr><td align="left"><br></td></tr>
 <tr><td><a href="Reagents.S.html#VAL(<*>)">(&lt;*&gt;)</a> [<a href="Reagents.S.html">Reagents.S</a>]</td>
-<td></td></tr>
+<td><div class="info">
+Parallel composition operator.
+</div>
+</td></tr>
 <tr><td><a href="Reagents.S.html#VAL(<+>)">(&lt;+&gt;)</a> [<a href="Reagents.S.html">Reagents.S</a>]</td>
-<td></td></tr>
-<tr><td><a href="Reagents.S.html#VAL(>>)">(&gt;&gt;)</a> [<a href="Reagents.S.html">Reagents.S</a>]</td>
-<td></td></tr>
+<td><div class="info">
+Left-biased choice.
+</div>
+</td></tr>
 <tr><td><a href="Reagents.S.html#VAL(>>=)">(&gt;&gt;=)</a> [<a href="Reagents.S.html">Reagents.S</a>]</td>
-<td></td></tr>
+<td><div class="info">
+The monadic bind primitive for reagents.
+</div>
+</td></tr>
+<tr><td><a href="Reagents.S.html#VAL(>>>)">(&gt;&gt;&gt;)</a> [<a href="Reagents.S.html">Reagents.S</a>]</td>
+<td><div class="info">
+The sequential composition operator.
+</div>
+</td></tr>
 <tr><td align="left"><br>A</td></tr>
 <tr><td><a href="Reagents.S.html#VALattempt">attempt</a> [<a href="Reagents.S.html">Reagents.S</a>]</td>
-<td></td></tr>
+<td><div class="info">
+Convert a blocking reagent into a non-blocking one.
+</div>
+</td></tr>
 <tr><td align="left"><br>C</td></tr>
-<tr><td><a href="Reagents.S.html#VALchoose">choose</a> [<a href="Reagents.S.html">Reagents.S</a>]</td>
-<td></td></tr>
-<tr><td><a href="Reagents.S.html#VALcomputed">computed</a> [<a href="Reagents.S.html">Reagents.S</a>]</td>
-<td></td></tr>
 <tr><td><a href="Reagents.S.html#VALconstant">constant</a> [<a href="Reagents.S.html">Reagents.S</a>]</td>
-<td></td></tr>
+<td><div class="info">
+<code class="code">constant v</code> is a reagent that always returns <code class="code">v</code>.
+</div>
+</td></tr>
 <tr><td align="left"><br>G</td></tr>
 <tr><td><a href="Reagents.Scheduler.html#VALget_tid">get_tid</a> [<a href="Reagents.Scheduler.html">Reagents.Scheduler</a>]</td>
-<td></td></tr>
-<tr><td><a href="Reagents.S.html#VALget_tid">get_tid</a> [<a href="Reagents.S.html">Reagents.S</a>]</td>
-<td></td></tr>
+<td><div class="info">
+Return the current thread id.
+</div>
+</td></tr>
 <tr><td align="left"><br>L</td></tr>
 <tr><td><a href="Reagents.S.html#VALlift">lift</a> [<a href="Reagents.S.html">Reagents.S</a>]</td>
-<td></td></tr>
+<td><div class="info">
+<code class="code">lift f</code> lifts a pure function <code class="code">f</code> to a reagent.
+</div>
+</td></tr>
 <tr><td><a href="Reagents.S.html#VALlift_blocking">lift_blocking</a> [<a href="Reagents.S.html">Reagents.S</a>]</td>
-<td></td></tr>
+<td><div class="info">
+<code class="code">lift_blocking f</code> blocks if <code class="code">f</code> returns <code class="code"><span class="constructor">None</span></code>.
+</div>
+</td></tr>
 <tr><td align="left"><br>N</td></tr>
 <tr><td><a href="Reagents.S.html#VALnever">never</a> [<a href="Reagents.S.html">Reagents.S</a>]</td>
-<td></td></tr>
+<td><div class="info">
+A reagent that is never enabled.
+</div>
+</td></tr>
 <tr><td align="left"><br>P</td></tr>
 <tr><td><a href="Reagents.S.html#VALpost_commit">post_commit</a> [<a href="Reagents.S.html">Reagents.S</a>]</td>
-<td></td></tr>
+<td><div class="info">
+<code class="code">post_commit f</code> returns a reagent <code class="code">r</code> that runs <code class="code">f r</code> after the reagent
+      <code class="code">r</code> (or any reagent constructed using <code class="code">r</code>) commits.
+</div>
+</td></tr>
 <tr><td align="left"><br>R</td></tr>
 <tr><td><a href="Reagents.Scheduler.html#VALresume">resume</a> [<a href="Reagents.Scheduler.html">Reagents.Scheduler</a>]</td>
-<td></td></tr>
+<td><div class="info">
+<code class="code">resume k v</code> prepares to resume the continuation <code class="code">k</code> with value <code class="code">v</code> and
+      enqueues the continuation to the scheduler queue.
+</div>
+</td></tr>
+<tr><td><a href="Reagents.S.html#VALreturn">return</a> [<a href="Reagents.S.html">Reagents.S</a>]</td>
+<td><div class="info">
+The monadic return primitive for reagents.
+</div>
+</td></tr>
 <tr><td><a href="Reagents.S.html#VALrun">run</a> [<a href="Reagents.S.html">Reagents.S</a>]</td>
-<td></td></tr>
+<td><div class="info">
+<code class="code">run r v</code> runs the reagents <code class="code">r</code> with value <code class="code">v</code>.
+</div>
+</td></tr>
 <tr><td align="left"><br>S</td></tr>
 <tr><td><a href="Reagents.Scheduler.html#VALsuspend">suspend</a> [<a href="Reagents.Scheduler.html">Reagents.Scheduler</a>]</td>
-<td></td></tr>
+<td><div class="info">
+<code class="code">suspend f</code> applies <code class="code">f</code> to the current continuation.
+</div>
+</td></tr>
 </table>
 </body>
 </html>
