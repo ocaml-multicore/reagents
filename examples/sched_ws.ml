@@ -50,7 +50,7 @@ module Make (S : sig val num_domains : int end) : S = struct
 
   let num_threads = Kcas.ref 0
 
-  let sq = Array.init S.num_domains (fun _ -> Lockfree.WSQueue.create ())
+  let sq = Random.self_init (); Array.init S.num_domains (fun _ -> Lockfree.WSQueue.create ());;
 
   let fresh_tid () = Oo.id (object end)
 
@@ -61,7 +61,7 @@ module Make (S : sig val num_domains : int end) : S = struct
     let queue = Array.get sq dom_id in
     let rec loop () = match Lockfree.WSQueue.pop queue with
       |Some k -> continue k ()
-      |None -> begin
+      |None -> begin (* Stealing from another thread *)
           if Kcas.get num_threads = 0 then
             ()
           else
