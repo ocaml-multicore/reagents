@@ -1,6 +1,8 @@
 true : bin_annot, safe_string, package(bytes)
 true : package(unix kcas lockfree)
 
+true : debug
+
 <src> : include
 <src/lib> : include
 <src/data> : include
