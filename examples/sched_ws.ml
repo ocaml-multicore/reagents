@@ -53,12 +53,10 @@ module Make (S : sig val num_domains : int end) : S = struct
 
   let num_threads = Kcas.ref 0
 
-  (*let sq = Random.self_init (); Array.init S.num_domains (fun _ -> Lockfree.WSQueue.create ());;*)
   let sq = Bag.create ();;
 
   let fresh_tid () = Oo.id (object end)
 
-  (*let enqueue c dom_id = Lockfree.WSQueue.push (Array.get sq dom_id) c*)
   let enqueue c dom_id = Bag.push sq c
 
   let rec dequeue () =
@@ -93,47 +91,6 @@ module Make (S : sig val num_domains : int end) : S = struct
       |effect (ForkOn (f, dom_id)) k -> enqueue k dom_id; spawn f (fresh_tid ())
     end
 
-(*  let rec dequeue_wid dom_id =
-    let b = Kcas.Backoff.create () in
-    let queue = Array.get sq dom_id in
-    let rec loop () = match Lockfree.WSQueue.pop queue with
-      |Some k -> continue k ()
-      |None -> begin (* Stealing from another thread *)
-          if Kcas.get num_threads = 0 then
-            ()
-          else
-            let steal_id = Random.int (Array.length sq) in
-            let queue = Array.get sq steal_id in
-            match Lockfree.WSQueue.steal queue with
-            |Some k -> continue k ()
-            |None -> Kcas.Backoff.once b ; loop ()
-      end
-    in loop ()
-  and dequeue () = dequeue_wid (Domain.self ())
-  and spawn f (tid:int) =
-    Kcas.incr num_threads;
-    begin
-      match f () with
-      | () -> (Kcas.decr num_threads; dequeue ())
-      | effect (Fork f) k ->
-          let new_tid = fresh_tid () in
-          enqueue k (Domain.self ());
-(*           Printf.printf "forking thread %d\n" new_tid; *)
-          spawn f new_tid
-      | effect Yield k -> enqueue k (Domain.self ()); dequeue ()
-      | effect (Suspend f) k ->
-          ( match f (k, Domain.self()) with
-            | None ->
-(*                 Printf.printf "[%d] Suspending thread\n%!" tid; *)
-                dequeue ()
-            | Some v -> continue k v )
-      | effect (Resume ((t,qid), v)) k -> enqueue k qid; continue t v
-      | effect GetTid k -> continue k tid
-      | effect NumDomains k -> continue k (S.num_domains)
-      | effect (ForkOn (f, dom_id)) k ->
-          (enqueue k dom_id; spawn f (fresh_tid ()))
-    end
-*)
   let run_with f num_domains =
     let started = Kcas.ref 0 in
     let worker () =

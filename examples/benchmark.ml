@@ -129,13 +129,6 @@ module Data = Reagents_data.Make(Reagents);;
 
 let main () =
   let n = 5 in
-(*  let module M = Test(Lock_queue) in
-  let (m,sd) = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) n in
-  printf "Lock_queue : mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m);
-
-  let module M = Test(MakeQ(Data.MichaelScott_queue)) in
-  let (m,sd) = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) n in
-  printf "Reagent Lockfree.MSQueue: mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m);*)
 
   let module M = Test(Lockfree.MSQueue) in
   let (m,sd) = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) n in
