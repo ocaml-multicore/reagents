@@ -58,6 +58,7 @@ module Make (S : sig val num_domains : int end) : S = struct
 
   let fresh_tid () = Oo.id (object end)
 
+  (*let enqueue c dom_id = Lockfree.WSQueue.push (Array.get sq dom_id) c*)
   let enqueue c dom_id = Bag.push sq c
 
   let rec dequeue () =
@@ -67,7 +68,7 @@ module Make (S : sig val num_domains : int end) : S = struct
       |Some(k) -> continue k ()
       |None ->
         if Kcas.get num_threads <> 0 then begin
-          Kcas.Backoff.once b; dequeue ()
+          Kcas.Backoff.once b; loop ()
         end
     in loop ()
   and spawn f (tid:int) =

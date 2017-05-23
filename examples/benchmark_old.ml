@@ -117,7 +117,7 @@ module Test (Q : QUEUE) = struct
     done;
     (*produce items_per_domain;*)
     run (CDL.await b) ();
-    if Cas.get a < num_items then begin
+    if Cas.get a <> items_per_dom * num_doms then begin
       print_endline (sprintf "get %d but %d expected" (Cas.get a) num_items);
       assert false
     end
