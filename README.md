@@ -10,12 +10,11 @@ Homepage: https://github.com/ocamllabs/reagents
 
 ## Installation
 
-reagents can be installed with `opam`:
+reagents can be installed with `opam`. You would also need to install the multicore OCaml compiler:
 
-    opam install reagents
-
-If you don't use `opam` consult the [`opam`](opam) file for build
-instructions.
+    $ opam remote add multicore https://github.com/ocamllabs/multicore-opam.git
+    $ opam switch 4.02.2+multicore
+    $ opam install reagents
 
 ## Documentation
 
