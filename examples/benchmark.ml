@@ -5,17 +5,18 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 *)
 
 let print_usage_and_exit () =
-  print_endline @@ "Usage: " ^ Sys.argv.(0) ^ " <num_domains> <num_items>";
+  print_endline @@ "Usage: " ^ Sys.argv.(0) ^ " <num_domains> <num_task> <num_items>";
   exit(0)
 ;;
 
-let (num_doms, num_items) =
-  if Array.length Sys.argv < 3 then
+let (num_doms, num_task, num_items) =
+  if Array.length Sys.argv < 4 then
     print_usage_and_exit ()
   else try
     let a = int_of_string (Sys.argv.(1)) in
     let b = int_of_string (Sys.argv.(2)) in
-    (a,b)
+    let c = int_of_string (Sys.argv.(3)) in
+    (a,b,c)
   with Failure _ -> print_usage_and_exit ()
 ;;
 
@@ -25,7 +26,7 @@ let () =
      exit 0)
 ;;
 
-let items_per_dom = 1 + num_items / num_doms;;
+let item_per_task = 1 + num_items / num_task;;
 
 (*let () = Printf.printf "[%d] items_per_domain = %d\n%!" (Domain.self ()) items_per_dom;;*)
 
@@ -93,31 +94,46 @@ module CDL  = Sync.Countdown_latch;;
 module Test (Q : QUEUE) = struct
   module Cas = Kcas.W1;;
 
-  let run num_doms items_per_domain =
-    let a = Cas.ref 0 in
-    let q : int Q.t = Q.create () in
-    let b = CDL.create (num_doms) in
-    (* initialize work *)
-    let rec produce = function
+(*  let q : int Q.t = Q.create ();;
+  let () =
+    let rec produce nb =
+      match nb with
       |0 -> ()
       |i -> Q.push q i; produce (i-1)
+    in produce num_items;;*)
+
+  let run () =
+    let a = Cas.ref 0 in
+(*    let len = Cas.ref 0 in*)
+    let q : int Q.t = Q.create () in
+    let b = CDL.create (num_task) in
+    (* initialize work *)
+    let rec produce nb =
+      match nb with
+      |0 -> ()
+      |i -> Q.push q i;
+(*      Cas.incr len;*)
+      produce (i-1)
     in
-    let rec consume i =
+    let rec consume nb =
       match Q.pop q with
-      |None ->
-        let count = run (CDL.get_count b) () in
-        Cas.map a (fun c -> Some(c + i)); () (* printf "[%d] consumed=%d    count=%d\n%!" (Domain.self ()) i count *)
-      |Some _ -> consume (i+1)
+      |Some(_) when nb > 0 ->
+      Cas.incr a;
+(*      Cas.decr len;*)
+      consume (nb-1)
+      |_ -> ()
+      (*print_endline (sprintf "TH%d : still %d to be pop (%d per task) (queue length %d)" (Domain.self ()) nb item_per_task (Cas.get len));*)
     in
-    for i = 0 to num_doms - 1 do
-      S.fork_on (fun () ->
-        produce items_per_domain;
-        consume 0;
-        run (CDL.count_down b) ()) i
+    for i = 0 to num_task - 1 do
+      S.fork (fun () ->
+                produce (2*item_per_task);
+                consume item_per_task;
+                run (CDL.count_down b) ())
     done;
-    (*produce items_per_domain;*)
+(*    produce item_per_task;*)
     run (CDL.await b) ();
-    if Cas.get a <> items_per_dom * num_doms then begin
+(*    print_endline (sprintf "Elements consumed and produced : %d/%d" (Cas.get a) (item_per_task * num_task));*)
+    if Cas.get a < num_items then begin
       print_endline (sprintf "get %d but %d expected" (Cas.get a) num_items);
       assert false
     end (*else
@@ -128,10 +144,10 @@ end;;
 module Data = Reagents_data.Make(Reagents);;
 
 let main () =
-  let n = 5 in
+  let n = 10 in
 
-  let module M = Test(Lockfree.MSQueue) in
-  let (m,sd) = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) n in
+  let module M = Test(Lockfree.List) in
+  let (m,sd) = Benchmark.benchmark (fun () -> M.run ()) n in
   (*printf "Hand-written Lockfree.MSQueue: mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m)*)
   print_endline (sprintf "%f" m)
 

@@ -57,7 +57,7 @@ module Make (S : sig val num_domains : int end) : S = struct
 
   let fresh_tid () = Oo.id (object end)
 
-  let enqueue c dom_id = Bag.push sq c
+  let enqueue c = Bag.push sq c
 
   let rec dequeue () =
     let b = Kcas.Backoff.create () in
@@ -76,19 +76,19 @@ module Make (S : sig val num_domains : int end) : S = struct
       |() -> (Kcas.decr num_threads; dequeue ())
       |effect (Fork f) k ->
         let new_tid = fresh_tid () in
-        enqueue k (Domain.self ());
+        enqueue k;
 (*           Printf.printf "forking thread %d\n" new_tid; *)
         spawn f new_tid
-      |effect Yield k -> enqueue k (Domain.self ()); dequeue ()
+      |effect Yield k -> enqueue k; dequeue ()
       |effect (Suspend f) k -> begin
         match f (k, Domain.self()) with
         |None -> dequeue ()
         |Some(v) -> continue k v
       end
-      |effect (Resume ((t,qid), v)) k -> enqueue k qid; continue t v
+      |effect (Resume ((t,qid), v)) k -> enqueue k; continue t v
       |effect GetTid k -> continue k tid
       |effect NumDomains k -> continue k (S.num_domains)
-      |effect (ForkOn (f, dom_id)) k -> enqueue k dom_id; spawn f (fresh_tid ())
+      |effect (ForkOn (f, dom_id)) k -> enqueue k; spawn f (fresh_tid ())
     end
 
   let run_with f num_domains =
