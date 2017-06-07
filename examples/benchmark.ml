@@ -88,6 +88,8 @@ module Benchmark = struct
   ;;
 end;;
 
+let loop_wait = 100000;;
+
 module Sync = Reagents_sync.Make(Reagents);;
 module CDL  = Sync.Countdown_latch;;
 
@@ -109,6 +111,9 @@ module Test (Q : QUEUE) = struct
     let b = CDL.create (num_task) in
     (* initialize work *)
     let rec produce nb =
+      for i = 0 to loop_wait do
+        ()
+      done;
       match nb with
       |0 -> ()
       |i -> Q.push q i;
@@ -116,6 +121,9 @@ module Test (Q : QUEUE) = struct
       produce (i-1)
     in
     let rec consume nb =
+      for i = 0 to loop_wait do
+        ()
+      done;
       match Q.pop q with
       |Some(_) when nb > 0 ->
       Cas.incr a;
