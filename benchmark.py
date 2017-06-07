@@ -3,7 +3,6 @@
 ########
 
 import os
-import matplotlib.pyplot as plt
 import sys
 
 test = "_build/examples/benchmark.native "
