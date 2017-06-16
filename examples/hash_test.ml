@@ -84,41 +84,46 @@ module Test (H : HASH) = struct
     in loop 0 []
   ;;
 
-  let gen_queue l =
-    let out = Queue.create () in
+  let split_list l n =
+    let out = Array.init n (fun i -> []) in
+    let rec loop l i =
+      match l with
+      |h::t -> out.(i mod n) <- (h::(out.(i mod n))); loop t (i+1)
+      |[] -> Array.to_list out
+    in loop l 0
+  ;;
+
+  let insert_hash t l =
     let rec loop l =
       match l with
-      |h::t -> Queue.push out h; loop t
-      |[] -> out
-    in loop l; out
+      |v::tl -> H.add t v v; loop tl
+      |[] -> ()
+    in loop l
   ;;
 
-  let insert_hash t q =
-    let rec loop () =
-      match Queue.pop q with
-      |Some(v) -> H.add t v v; loop ()
-      |None -> ()
-    in loop ()
-  ;;
+  let elem = gen_elem num_items (num_items * 1000);;
+  let ll = split_list elem num_doms;;
 
-  let run num_doms nb =
+  let run () =
     let h = H.create () in
     let b = CDL.create (num_doms) in
-    let elem = gen_elem nb (nb * 1000) in
-    let q = gen_queue elem in
-    for i = 0 to num_doms - 1 do
-      S.fork (fun () ->
-        insert_hash h q;
-        run (CDL.count_down b) ())
-    done;
+    let rec loop ll =
+      match ll with
+      |l::tl ->
+        S.fork (fun () ->
+          insert_hash h l;
+          run (CDL.count_down b) ());
+        loop tl
+      |[] -> ()
+    in loop ll;
     run (CDL.await b) ()
   ;;
 end;;
 
 let main () =
-  let n = 5 in
+  let n = 2 in
   let module M = Test(Hash) in
-  let (m,sd) = Benchmark.benchmark (fun () -> M.run num_doms num_items) n in
+  let (m,sd) = Benchmark.benchmark (fun () -> M.run ()) n in
   (*printf "Hand-written Lockfree.MSQueue: mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m)*)
   print_endline (sprintf "%f" m)
 ;;
