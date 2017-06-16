@@ -152,7 +152,7 @@ end;;
 module Data = Reagents_data.Make(Reagents);;
 
 let main () =
-  let n = 10 in
+  let n = 5 in
 
   let module M = Test(Lockfree.List) in
   let (m,sd) = Benchmark.benchmark (fun () -> M.run ()) n in

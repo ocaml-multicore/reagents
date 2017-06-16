@@ -51,7 +51,7 @@ module Make (S : sig val num_domains : int end) : S = struct
   let fork_on f dom_id = perform (ForkOn (f, dom_id))
   let num_domains () = perform NumDomains
 
-  let num_threads = Kcas.ref 0
+  let num_threads = Kcas.ref 0;;
 
   let sq = Bag.create ();;
 

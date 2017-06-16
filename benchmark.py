@@ -8,7 +8,7 @@ import sys
 test = "_build/examples/benchmark.native "
 test_old = "_build/examples/benchmark_old.native "
 
-nb_thread = 2
+nb_thread = 40
 nb_task_init = 2
 nb_task_end = 64
 nb_item = 10000
