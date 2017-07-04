@@ -12,4 +12,4 @@ let () =
        example "dining_philosophers"; example "rec_test"; example "three_way"; example "benchmark" ;
        example "two_way"; example "ref_channel"; example "sat"; example "swap_test2";
        example "stack_test_compose"; example "reagent_queue"; example "hw_queue";
-       example "eli_stack"; ]
+       example "eli_stack"; example "tsx_test"]

@@ -41,7 +41,7 @@ module Make (Sched : Scheduler.S) : S = struct
 
   let get_id r = Kcas.get_id r
 
-  let equal o1 o2 = get_id o1 = get_id o2
+  let equal o1 o2 = Kcas.equal o1 o2;;
 
   let is_active o = match Kcas.get o with
     | Empty | Waiting _ -> true
