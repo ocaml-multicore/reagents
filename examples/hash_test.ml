@@ -121,7 +121,7 @@ module Test (H : HASH) = struct
 end;;
 
 let main () =
-  let n = 2 in
+  let n = 10 in
   let module M = Test(Hash) in
   let (m,sd) = Benchmark.benchmark (fun () -> M.run ()) n in
   (*printf "Hand-written Lockfree.MSQueue: mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m)*)
@@ -129,4 +129,4 @@ let main () =
 ;;
 
 
-let () = S.run main
+let () = while true do S.run main done;;

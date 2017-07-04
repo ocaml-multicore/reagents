@@ -35,21 +35,27 @@ module Make (Sched : Scheduler.S) : S = struct
     | Rescinded
     | Completed of 'a
 
-  type 'a t = 'a status Kcas.ref
+  type 'a t = {
+    content : 'a status Kcas.ref;
+    id : int;
+  };;
 
-  let make () = Kcas.ref Empty
+  let make () = {
+    content = Kcas.ref Empty;
+    id = Oo.id (object end);
+  };;
 
-  let get_id r = Kcas.get_id r
+  let get_id r = r.id;;
 
-  let equal o1 o2 = Kcas.equal o1 o2;;
+  let equal o1 o2 = o1.id = o2.id;;
 
-  let is_active o = match Kcas.get o with
+  let is_active o = match Kcas.get o.content with
     | Empty | Waiting _ -> true
     | Rescinded | Completed _ -> false
 
   let wait r = Sched.suspend (fun k ->
     let cas_result =
-      Kcas.map r (fun v ->
+      Kcas.map r.content (fun v ->
         match v with
         | Empty -> Some (Waiting k)
         | Waiting _ -> failwith "Offer.wait(1)"
@@ -66,17 +72,17 @@ module Make (Sched : Scheduler.S) : S = struct
     | Kcas.Failed  -> failwith "Offer.wait(2)")
 
   let complete r new_v =
-    let old_v = Kcas.get r in
+    let old_v = Kcas.get r.content in
     match old_v with
     | Waiting k ->
-        PostCommitCas.cas r old_v (Completed new_v) (fun () -> Sched.resume k ())
+        PostCommitCas.cas r.content old_v (Completed new_v) (fun () -> Sched.resume k ())
     | Empty ->
-        PostCommitCas.cas r old_v (Completed new_v) (fun () -> ())
+        PostCommitCas.cas r.content old_v (Completed new_v) (fun () -> ())
     | Rescinded | Completed _ -> PostCommitCas.return false (fun () -> ())
 
   let rescind r =
     let cas_result =
-      Kcas.map r (fun v ->
+      Kcas.map r.content (fun v ->
         match v with
         | Empty | Waiting _ -> Some Rescinded
         | Rescinded | Completed _ -> None)
@@ -86,13 +92,13 @@ module Make (Sched : Scheduler.S) : S = struct
         | Kcas.Success (Waiting t) -> Sched.resume t ()
         | _ -> ()
       end;
-      match Kcas.get r with
+      match Kcas.get r.content with
       | Rescinded -> None
       | Completed v -> Some v
       | _ -> failwith "Offer.rescind")
 
   let get_result r =
-    match Kcas.get r with
+    match Kcas.get r.content with
     | Completed v -> Some v
     | _ -> None
 end
