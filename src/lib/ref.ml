@@ -32,7 +32,7 @@ module Make(Sched: Scheduler.S)
   module Offer = Offer.Make (Sched)
   module Reagent = Reagent.Make (Sched)
   module Reaction = Reaction.Make (Sched)
-  module Bag = Lockfree.Bag;;
+  module Bag = Lockfree.Bag_Custom(struct let nb_domains = 2;; end);;
 
   type mono_offer = Offer : 'a Offer.t -> mono_offer
 
