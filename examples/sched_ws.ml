@@ -26,7 +26,7 @@ module type S = sig
 end
 
 module Make (S : sig val num_domains : int end) : S = struct
-  module Bag = Lf_bag.Make(struct
+  module Bag = Lockfree.Bag_Custom(struct
     let nb_domains = S.num_domains;;
   end);;
 

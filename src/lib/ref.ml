@@ -32,25 +32,26 @@ module Make(Sched: Scheduler.S)
   module Offer = Offer.Make (Sched)
   module Reagent = Reagent.Make (Sched)
   module Reaction = Reaction.Make (Sched)
+  module Bag = Lockfree.Bag;;
 
   type mono_offer = Offer : 'a Offer.t -> mono_offer
 
   type 'a ref =
     { data : 'a Kcas.ref;
-      offers : mono_offer Lockfree.MSQueue.t }
+      offers : mono_offer Bag.t }
 
   type ('a,'b) reagent = ('a,'b) Reagent.t
 
   open Reagent
 
-  let mk_ref v = { data = Kcas.ref v; offers = Lockfree.MSQueue.create () }
+  let mk_ref v = { data = Kcas.ref v; offers = Bag.create () }
 
   let rec read : 'a 'r. 'a ref -> ('a,'r) reagent -> (unit,'r) reagent =
     fun r k ->
       let try_react () rx o =
         let () = match o with
           | None -> ()
-          | Some ov -> Lockfree.MSQueue.push r.offers (Offer ov)
+          | Some ov -> Bag.push r.offers (Offer ov)
         in
         let v = Kcas.get r.data in
         k.try_react v rx o
@@ -65,7 +66,7 @@ module Make(Sched: Scheduler.S)
 
   let wake_all q =
     let rec loop () =
-      match Lockfree.MSQueue.pop q with
+      match Bag.pop q with
       | None -> ()
       | Some (Offer ov) -> ( ignore (Offer.rescind ov); loop () )
     in loop ()
@@ -86,7 +87,7 @@ module Make(Sched: Scheduler.S)
       else
         let () = match o with
           | None -> ()
-          | Some ov -> Lockfree.MSQueue.push r.offers (Offer ov)
+          | Some ov -> Bag.push r.offers (Offer ov)
         in
         let ov = Kcas.get r.data in
         match f ov b with
