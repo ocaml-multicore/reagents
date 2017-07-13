@@ -37,7 +37,7 @@ module M = struct
   let num_domains = num_doms
 end
 
-module S = Sched_ws.Make (M)
+module S = Sched_work_stealing.Make (M)
 
 module Reagents = Reagents.Make (S)
 open Reagents

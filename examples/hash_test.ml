@@ -26,7 +26,7 @@ let items_per_dom = num_items;;
 
 (*let () = Printf.printf "[%d] items_per_domain = %d\n%!" (Domain.self ()) items_per_dom;;*)
 
-module S = Sched_ws.Make(struct
+module S = Sched_work_stealing.Make(struct
   let num_domains = num_doms;;
 end);;
 

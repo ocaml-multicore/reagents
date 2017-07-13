@@ -36,7 +36,7 @@ let () = Printf.printf "[%d] items_per_domain = %d\n%!" (Domain.self ()) items_p
 module M = struct
   let num_domains = num_doms
 end
-module S = Sched_ws.Make (M)
+module S = Sched_work_stealing.Make (M)
 
 let id_str () = Printf.sprintf "%d:%d" (Domain.self ()) (S.get_tid ())
 

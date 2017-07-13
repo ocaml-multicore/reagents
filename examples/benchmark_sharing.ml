@@ -20,6 +20,8 @@ let (num_doms, num_task, num_items) =
   with Failure _ -> print_usage_and_exit ()
 ;;
 
+let loop_wait = 100000;;
+
 let () =
   if num_doms mod 2 <> 0 then
     (print_endline @@ "<num_domains> must be multiple of 2";
@@ -27,18 +29,11 @@ let () =
 ;;
 
 let item_per_task = 1 + num_items / num_task;;
+let loop_per_task = 1 + loop_wait / num_task;;
 
-(*let () = Printf.printf "[%d] items_per_domain = %d\n%!" (Domain.self ()) items_per_dom;;*)
-
-module S = Sched_ws.Make(struct
+module S = Sched_work_sharing.Make(struct
   let num_domains = num_doms;;
 end);;
-
-module type BARRIER = sig
-  type t
-  val create : int -> t
-  val finish : t -> unit
-end;;
 
 module Reagents = Reagents.Make(S);;
 open Reagents;;
@@ -50,20 +45,6 @@ module type QUEUE = sig
   val create : unit -> 'a t;;
   val push   : 'a t -> 'a -> unit;;
   val pop    : 'a t -> 'a option;;
-end;;
-
-module type RQUEUE = sig
-  type 'a t;;
-  val create  : unit -> 'a t;;
-  val push    : 'a t -> ('a, unit) Reagents.t;;
-  val try_pop : 'a t -> (unit, 'a option) Reagents.t;;
-end;;
-
-module MakeQ (RQ : RQUEUE) : QUEUE = struct
-  type 'a t = 'a RQ.t;;
-  let create = RQ.create;;
-  let push q v = Reagents.run (RQ.push q) v;;
-  let pop q = Reagents.run (RQ.try_pop q) ();;
 end;;
 
 module Benchmark = struct
@@ -88,64 +69,46 @@ module Benchmark = struct
   ;;
 end;;
 
-let loop_wait = 100000;;
-
 module Sync = Reagents_sync.Make(Reagents);;
 module CDL  = Sync.Countdown_latch;;
 
 module Test (Q : QUEUE) = struct
   module Cas = Kcas.W1;;
 
-(*  let q : int Q.t = Q.create ();;
-  let () =
-    let rec produce nb =
-      match nb with
-      |0 -> ()
-      |i -> Q.push q i; produce (i-1)
-    in produce num_items;;*)
-
   let run () =
     let a = Cas.ref 0 in
-(*    let len = Cas.ref 0 in*)
     let q : int Q.t = Q.create () in
     let b = CDL.create (num_task) in
     (* initialize work *)
-    let rec produce nb =
-      for i = 0 to loop_wait do
+    let rec produce nb w =
+      for i = 1 to w do
         ()
       done;
-      match nb with
-      |0 -> ()
-      |i -> Q.push q i;
-(*      Cas.incr len;*)
-      produce (i-1)
+      for i = 1 to nb do
+        Q.push q i
+      done
     in
-    let rec consume nb =
-      for i = 0 to loop_wait do
+    let rec consume nb w =
+      for i = 1 to w do
         ()
       done;
-      match Q.pop q with
-      |Some(_) when nb > 0 ->
-      Cas.incr a;
-(*      Cas.decr len;*)
-      consume (nb-1)
-      |_ -> ()
-      (*print_endline (sprintf "TH%d : still %d to be pop (%d per task) (queue length %d)" (Domain.self ()) nb item_per_task (Cas.get len));*)
+      for i = 1 to nb do
+        match Q.pop q with
+        |Some(_) -> Cas.incr a
+        |_ -> ()
+      done
     in
-    for i = 0 to num_task - 1 do
-      S.fork (fun () ->
-                produce (2*item_per_task);
-                consume item_per_task;
-                run (CDL.count_down b) ())
+    for i = 1 to num_task do
+      S.fork_on (fun () ->
+                produce (2*item_per_task) loop_per_task;
+                consume item_per_task loop_per_task;
+                run (CDL.count_down b) ()) (i mod num_doms)
     done;
-(*    produce item_per_task;*)
     run (CDL.await b) ();
-(*    print_endline (sprintf "Elements consumed and produced : %d/%d" (Cas.get a) (item_per_task * num_task));*)
     if Cas.get a < num_items then begin
       print_endline (sprintf "get %d but %d expected" (Cas.get a) num_items);
       assert false
-    end (*else
-      print_endline (sprintf "SUCCESS item consume %d (thread: %d, %d)" (Cas.get a) num_doms num_items);*)
+    end
   ;;
 end;;
 
@@ -156,7 +119,6 @@ let main () =
 
   let module M = Test(Lockfree.List) in
   let (m,sd) = Benchmark.benchmark (fun () -> M.run ()) n in
-  (*printf "Hand-written Lockfree.MSQueue: mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m)*)
   print_endline (sprintf "%f" m)
 
 

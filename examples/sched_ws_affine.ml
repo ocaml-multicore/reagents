@@ -19,7 +19,7 @@ module type S = sig
   val suspend : ('a cont -> 'a option) -> 'a
   val resume  : 'a cont -> 'a -> unit
   val fork    : (unit -> unit) -> unit
-  val fork_on : int -> (unit -> unit) -> unit
+  val fork_on : (unit -> unit) -> int -> unit
   val yield   : unit -> unit
   val get_tid : unit -> int
   val run     : (unit -> unit) -> unit
@@ -45,7 +45,7 @@ module Make (S : sig val num_domains : int end) : S = struct
   effect ForkOn     : (unit -> unit) * int -> unit
   effect NumDomains : int
 
-  let fork_on dom_id f = perform (ForkOn (f, dom_id))
+  let fork_on f dom_id = perform (ForkOn (f, dom_id))
   let num_domains () = perform NumDomains
 
   let num_threads = Kcas.ref 0

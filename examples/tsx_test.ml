@@ -24,7 +24,7 @@ let print s =
   print_endline s
 ;;
 
-module S = Sched_ws.Make(struct
+module S = Sched_work_stealing.Make(struct
   let num_domains = num_doms;;
 end);;
 

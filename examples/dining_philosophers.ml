@@ -30,7 +30,7 @@ let (num_philosophers, num_rounds) =
     with
     | Failure _ -> print_usage_and_exit ()
 
-module S = Sched_ws_affine.Make (struct
+module S = Sched_work_stealing.Make (struct
   let num_domains = num_philosophers
 end)
 
@@ -76,7 +76,7 @@ let main () =
   in
 
   for i = 1 to num_philosophers - 1 do
-    S.fork_on i (work i)
+    S.fork_on (work i) i
   done;
   work 0 ();
   run (CDL.await b) ();

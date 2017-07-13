@@ -31,7 +31,7 @@ module Ref_channel(Reagents : Reagents.S)
  end
 
 open Printf
-module Scheduler = Sched_ws.Make(struct let num_domains = 1 end)
+module Scheduler = Sched_work_stealing.Make(struct let num_domains = 1 end)
 module Reagents = Reagents.Make (Scheduler)
 open Scheduler
 open Reagents
