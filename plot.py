@@ -24,8 +24,8 @@ for f_name in l_f:
   print(lines)
   for i in range(1, len(lines), 2):
     if lines[i] != '':
-      x.append(lines[i])
-      y.append(lines[i+1])
+      x.append(lines[i+1])
+      y.append(lines[i])
 
   title_l.append(lines[0])
 
