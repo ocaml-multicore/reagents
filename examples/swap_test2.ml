@@ -15,14 +15,18 @@
  *)
 
 open Printf
-module Scheduler = Sched_ws.Make(struct let num_domains = 1 end)
+module Scheduler = Sched_ws.Make(
+  struct
+    let num_domains = 1
+    let is_affine = false
+  end)
 module Reagents = Reagents.Make (Scheduler)
 open Scheduler
 open Reagents
 open Reagents.Channel
 open Reagents.Ref
 
-let id_str () = sprintf "%d:%d" (Domain.self ()) (get_tid ())
+let id_str () = sprintf "%d:%d" (get_qid ()) (get_tid ())
 
 let main () =
   Printf.printf "This example blocks\n%!";

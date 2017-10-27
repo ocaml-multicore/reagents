@@ -31,14 +31,15 @@ let (num_doms, num_items) =
 
 let items_per_dom = num_items / num_doms
 
-let () = Printf.printf "[%d] items_per_domain = %d\n%!" (Domain.self ()) items_per_dom
-
 module M = struct
   let num_domains = num_doms
+  let is_affine = false
 end
 module S = Sched_ws.Make (M)
 
-let id_str () = Printf.sprintf "%d:%d" (Domain.self ()) (S.get_tid ())
+let () = Printf.printf "[%d] items_per_domain = %d\n%!" (S.get_qid ()) items_per_dom
+
+let id_str () = Printf.sprintf "%d:%d" (S.get_qid ()) (S.get_tid ())
 
 module type BARRIER = sig
   type t

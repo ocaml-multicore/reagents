@@ -35,6 +35,7 @@ let () = Printf.printf "items_per_domain = %d\n%!" items_per_dom
 
 module M = struct
   let num_domains = num_doms
+  let is_affine = false
 end
 
 module S = Sched_ws.Make (M)
@@ -99,12 +100,12 @@ module Test (Q : STACK) = struct
     let b = CDL.create num_doms in
     (* initialize work *)
     let rec produce = function
-      | 0 -> () (* printf "[%d] production complete\n%!" (Domain.self ()) *)
+      | 0 -> () (* printf "[%d] production complete\n%!" (S.get_qid ()) *)
       | i -> Q.push q i; produce (i-1)
     in
     let rec consume i =
       match Q.pop q with
-      | None -> () (* print_string @@ sprintf "[%d] consumed=%d\n%!" (Domain.self ()) i *)
+      | None -> () (* print_string @@ sprintf "[%d] consumed=%d\n%!" (S.get_qid ()) i *)
       | Some _ -> consume (i+1)
     in
     for i = 1 to num_doms - 1 do

@@ -30,9 +30,11 @@ let (num_philosophers, num_rounds) =
     with
     | Failure _ -> print_usage_and_exit ()
 
-module S = Sched_ws_affine.Make (struct
-  let num_domains = num_philosophers
-end)
+module S = Sched_ws.Make (
+  struct
+    let num_domains = num_philosophers
+    let is_affine = true
+  end)
 
 module Reagents = Reagents.Make (S)
 open Reagents
@@ -71,12 +73,12 @@ let main () =
     for j = 1 to num_rounds do
       eat l_fork r_fork i j
     done;
-    printf "[%d] done\n%!" (Domain.self());
+    printf "[%d] done\n%!" (S.get_qid ());
     run (CDL.count_down b) ()
   in
 
   for i = 1 to num_philosophers - 1 do
-    S.fork_on i (work i)
+    S.fork_on (work i) i
   done;
   work 0 ();
   run (CDL.await b) ();
