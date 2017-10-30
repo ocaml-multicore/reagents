@@ -15,7 +15,11 @@
  *)
 
 open Printf
-module Scheduler = Sched_ws.Make(struct let num_domains = 1 end)
+module Scheduler = Sched_ws.Make(
+  struct
+    let num_domains = 1
+    let is_affine = false
+  end)
 module Reagents = Reagents.Make (Scheduler)
 open Scheduler
 open Reagents

@@ -32,6 +32,7 @@ let () = Printf.printf "items_per_domain = %d\n%!" @@ items_per_dom
 
 module M = struct
   let num_domains = 3
+  let is_affine = false
 end
 
 module S = Sched_ws.Make (M)
@@ -90,7 +91,7 @@ module Test (Stack : STACK) = struct
     let rec consume = function
       | 0 -> ()
       | i -> 
-          let (a,b) = Stack.pop q1 q2 in
+          let _ = Stack.pop q1 q2 in
           consume (i-1)
     in
     S.fork_on (fun () ->
