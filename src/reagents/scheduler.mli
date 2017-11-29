@@ -16,20 +16,8 @@
  *)
 
 module type S = sig
-  type ('a,'b) endpoint
-  (** The type of endpoint which accepts value of type ['a] and return value of
-      type ['b]. *)
-
-  type ('a,'b) reagent
-  (** The type of reagent. See {!Reagents.t}. *)
-
-  val mk_chan : ?name:string -> unit -> ('a,'b) endpoint * ('b,'a) endpoint
-  (** Make a new channel. Returns a pair of dual endpoints. *)
-
-  val swap : ('a,'b) endpoint -> ('a,'b) reagent
-  (** Swap on the channel. *)
-
+  type 'a cont
+  val suspend : ('a cont -> 'a option) -> 'a
+  val resume  : 'a cont -> 'a -> unit
+  val get_tid : unit -> int
 end
-
-module Make (Sched : Scheduler.S) : S with
-  type ('a,'b) reagent = ('a,'b) Reagent.Make(Sched).t

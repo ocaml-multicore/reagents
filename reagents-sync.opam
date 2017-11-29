@@ -1,0 +1,22 @@
+opam-version: "1.2"
+maintainer: "KC Sivaramakrishnan <sk826@cl.cam.ac.uk>"
+authors: ["KC Sivaramakrishnan <sk826@cl.cam.ac.uk>"]
+homepage: "https://github.com/ocamllabs/reagents"
+doc: "https://ocamllabs.github.io/reagents/doc"
+license: "ISC"
+dev-repo: "https://github.com/ocamllabs/reagents.git"
+bug-reports: "https://github.com/ocamllabs/reagents/issues"
+tags: []
+
+available: [ ocaml-version >= "4.02.2"]
+
+depends: [
+	"reagents"	{>= "0.2.0"}
+]
+
+depopts: []
+
+build: [
+ ["jbuilder" "subst"] {pinned}
+ ["jbuilder" "build" "-p" name "-j" jobs]
+]

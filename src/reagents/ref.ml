@@ -27,10 +27,10 @@ module type S = sig
 end
 
 module Make(Sched: Scheduler.S)
-  : S with type ('a,'b) reagent = ('a,'b) Reagent.Make(Sched).t = struct
+  : S with type ('a,'b) reagent = ('a,'b) Reagent_core.Make(Sched).t = struct
 
   module Offer = Offer.Make (Sched)
-  module Reagent = Reagent.Make (Sched)
+  module Reagent_core = Reagent_core.Make (Sched)
   module Reaction = Reaction.Make (Sched)
 
   type mono_offer = Offer : 'a Offer.t -> mono_offer
@@ -39,9 +39,9 @@ module Make(Sched: Scheduler.S)
     { data : 'a Kcas.ref;
       offers : mono_offer Lockfree.MSQueue.t }
 
-  type ('a,'b) reagent = ('a,'b) Reagent.t
+  type ('a,'b) reagent = ('a,'b) Reagent_core.t
 
-  open Reagent
+  open Reagent_core
 
   let mk_ref v = { data = Kcas.ref v; offers = Lockfree.MSQueue.create () }
 
@@ -59,7 +59,7 @@ module Make(Sched: Scheduler.S)
           compose = (fun next -> read r (k.compose next));
           try_react }
 
-  let read r = read r Reagent.commit
+  let read r = read r Reagent_core.commit
 
   let read_imm r = Kcas.get r.data
 
@@ -100,7 +100,7 @@ module Make(Sched: Scheduler.S)
         compose = (fun next -> upd r f (k.compose next));
         try_react = try_react r f k}
 
-  let upd r f = upd r f Reagent.commit
+  let upd r f = upd r f Reagent_core.commit
 
   let cas r expect update = upd r (fun current () ->
     if current = expect then Some (update, ()) else None)

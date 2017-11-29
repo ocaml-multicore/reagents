@@ -5,6 +5,7 @@ module type S = sig
 
   val create : unit -> t
   (** [wait l c] returns [false] if the lock is not currently held. *)
+
   val wait      : lock -> t -> bool
   val signal    : t -> unit
   val broadcast : t -> unit
@@ -18,7 +19,8 @@ module Make (Reagents: Reagents.S) (Lock : Lock.S with type ('a,'b) reagent = ('
 
   open Reagents
 
-  module Q = MichaelScott_queue.Make(Reagents)
+  module D = Reagents_data.Make(Reagents)
+  module Q = D.MichaelScott_queue
   module X = Exchanger.Make(Reagents)
 
   type lock = Lock.t

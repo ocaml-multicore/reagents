@@ -4,8 +4,10 @@ module type S = sig
   type t
 
   val create : unit -> t
-  (** [wait l c] returns [false] if the lock is not currently held. *)
+
   val wait      : lock -> t -> bool
+  (** [wait l c] returns [false] if the lock is not currently held. *)
+
   val signal    : t -> unit
   val broadcast : t -> unit
 end

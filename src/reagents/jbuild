@@ -1,0 +1,6 @@
+(jbuild_version 1)
+
+(library
+ ((name        reagents)
+  (public_name reagents)
+  (libraries   (lockfree kcas))))

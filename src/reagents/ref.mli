@@ -47,11 +47,11 @@ module type S = sig
       current value [c] of the reference and the input value of the reagent. If
       [f] returns, [None] the protocol is retried. If [f] returns [Some v], the
       reference is attempted to atomically update from [c] to [v]. If the
-      update, fails the protocol is retried. 
+      update, fails the protocol is retried.
 
       The retry is efficient and does not actively consume CPU. The fiber is
       suspended until there is a possibility of success. *)
 end
 
 module Make(Sched: Scheduler.S)
-  : S with type ('a,'b) reagent = ('a,'b) Reagent.Make(Sched).t
+  : S with type ('a,'b) reagent = ('a,'b) Reagent_core.Make(Sched).t

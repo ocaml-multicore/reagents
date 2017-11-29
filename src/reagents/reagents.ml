@@ -41,9 +41,9 @@ module type S = sig
 end
 
 module Make (Sched: Scheduler) : S = struct
-  include Reagent.Make(Sched)
+  include Reagent_core.Make(Sched)
   module Ref = Ref.Make(Sched)
   module Channel = Channel.Make(Sched)
 
-  let get_tid = Sched.get_tid
+(*   let get_tid = Sched.get_tid *)
 end

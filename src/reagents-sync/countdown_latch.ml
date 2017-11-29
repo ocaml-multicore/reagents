@@ -11,7 +11,9 @@ module Make (Reagents : Reagents.S) : S
   with type ('a,'b) reagent = ('a,'b) Reagents.t = struct
 
   type ('a,'b) reagent = ('a,'b) Reagents.t
-  module C = Counter.Make (Reagents)
+  module D = Reagents_data.Make(Reagents)
+  module C = D.Counter
+
   open Reagents
 
   type t = C.t

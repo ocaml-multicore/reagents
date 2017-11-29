@@ -24,15 +24,15 @@ module type S = sig
 end
 
 module Make (Sched : Scheduler.S) : S with
-  type ('a,'b) reagent = ('a,'b) Reagent.Make(Sched).t = struct
+  type ('a,'b) reagent = ('a,'b) Reagent_core.Make(Sched).t = struct
 
-  module Reagent = Reagent.Make(Sched)
+  module Reagent_core = Reagent_core.Make(Sched)
   module Reaction = Reaction.Make(Sched)
   module Offer = Offer.Make(Sched)
 
-  open Reagent
+  open Reagent_core
 
-  type ('a,'b) reagent = ('a,'b) Reagent.t
+  type ('a,'b) reagent = ('a,'b) Reagent_core.t
 
   type ('a,'b) message =
     Message : 'c Offer.t * ('b,'a) t -> ('a,'b) message
@@ -60,7 +60,7 @@ module Make (Sched : Scheduler.S) : S with
           try_react = try_react payload sender_offer sender_rx receiver_k}
     in
     let complete_exchange =
-          sender_k.compose (complete_exchange Reagent.commit)
+          sender_k.compose (complete_exchange Reagent_core.commit)
     in
     Message (sender_offer, complete_exchange)
 
@@ -70,7 +70,7 @@ module Make (Sched : Scheduler.S) : S with
       incoming: ('b,'a) message Lockfree.MSQueue.t }
 
   let mk_chan ?name () =
-    let name = 
+    let name =
       match name with
       | None -> ""
       | Some n -> n
@@ -84,7 +84,7 @@ module Make (Sched : Scheduler.S) : S with
 
   let rec swap : 'a 'b 'r. ('a,'b) endpoint -> ('b,'r) reagent -> ('a,'r) reagent =
     let try_react ep k a rx offer =
-      let {name; outgoing; incoming} = ep in
+      let {name = _name; outgoing; incoming} = ep in
       (* Search for matching offers *)
       let rec try_from cursor retry =
         match Lockfree.MSQueue.next cursor with
@@ -126,5 +126,5 @@ module Make (Sched : Scheduler.S) : S with
         compose = (fun next -> swap ep (k.compose next));
         try_react = try_react ep k}
 
-  let swap ep = swap ep Reagent.commit
+  let swap ep = swap ep Reagent_core.commit
 end

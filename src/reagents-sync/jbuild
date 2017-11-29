@@ -1,0 +1,6 @@
+(jbuild_version 1)
+
+(library
+ ((name        reagents_sync)
+  (public_name reagents-sync)
+  (libraries   (reagents reagents-data))))
