@@ -1,9 +1,0 @@
-B ../../_build/default/src/reagents
-B ../../_build/default/src/reagents-data
-B ../../_build/default/src/reagents-sync
-FLG -open Reagents_sync__ -w @a-4-29-40-41-42-44-45-48-58-59-60-40 -strict-sequence -strict-formats -short-paths -keep-locs
-PKG kcas
-PKG lockfree
-S .
-S ../reagents
-S ../reagents-data
