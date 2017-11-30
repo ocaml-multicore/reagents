@@ -1,4 +1,4 @@
-vX.Y.Z YYYY-MM-DD Location
+v0.2.0 2017-11-30 Cambridge
 --------------------------
 
-First release. 
+Move to jbuilder.
