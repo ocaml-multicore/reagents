@@ -13,6 +13,7 @@ available: [ ocaml-version >= "4.02.2"]
 depends: [
 	"lockfree" {>= "0.1.0"}
 	"kcas" {>= "0.1.2"}
+	"jbuilder" {>= "1.0+beta16"}
 ]
 
 depopts: []
