@@ -1,0 +1,8 @@
+(jbuild_version 1)
+
+(executables
+  ((names (lock_test lock_queue lock_stack dining_philosophers counter_test
+					 eli_stack hw_queue queue_test reagent_queue rec_test ref_channel
+					 ref_test sat stack_test stack_test_compose swap_test swap_test2
+					 three_way two_way))
+	 (libraries (reagents unix))))
