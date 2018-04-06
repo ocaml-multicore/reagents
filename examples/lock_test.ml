@@ -24,7 +24,7 @@ module Reagents = Reagents.Make (Scheduler)
 open Scheduler
 open Reagents
 
-module Sync = Reagents_sync.Make(Reagents)
+module Sync = Reagents.Sync
 module Lock = Sync.Lock
 module CV = Sync.Condition_variable
 

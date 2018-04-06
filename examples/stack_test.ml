@@ -97,7 +97,7 @@ module Benchmark = struct
     get_mean_sd r
 end
 
-module Sync = Reagents_sync.Make(Reagents)
+module Sync = Reagents.Sync
 module CDL  = Sync.Countdown_latch
 
 module Test (Q : STACK) = struct
@@ -114,7 +114,7 @@ module Test (Q : STACK) = struct
       Printf.printf "%d\n%!" i;
       match Q.pop q with
       | None -> print_string @@ sprintf "[%d] consumed=%d\n%!" (S.get_qid ()) i
-      | Some v -> 
+      | Some v ->
           Printf.printf "i+1 = %d\n" (i+1);
           consume (i+1)
     in
@@ -130,10 +130,10 @@ module Test (Q : STACK) = struct
     run (CDL.await b) ()
 end
 
-module Data = Reagents_data.Make(Reagents)
+module Data = Reagents.Data
 
 module Channel_stack : STACK = struct
-  module TS = Treiber_stack.Make(Reagents)
+  module TS = Data.Treiber_stack
   module C = Reagents.Channel
   open Reagents
 

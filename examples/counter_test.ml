@@ -21,7 +21,7 @@ module Scheduler = Sched_ws.Make(
     let is_affine = false
   end)
 module Reagents = Reagents.Make (Scheduler)
-module R_data = Reagents_data.Make(Reagents)
+module R_data = Reagents.Data
 module Counter = R_data.Counter
 open Scheduler
 open Reagents

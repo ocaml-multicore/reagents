@@ -1,5 +1,0 @@
-B ../_build/default/reagents
-FLG -open Reagents__ -w -40
-PKG kcas
-PKG lockfree
-S .

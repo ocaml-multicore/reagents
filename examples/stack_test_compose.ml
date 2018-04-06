@@ -72,7 +72,7 @@ module type STACK = sig
   val pop    : t -> t -> int * int
 end
 
-module Sync = Reagents_sync.Make(Reagents)
+module Sync = Reagents.Sync
 module CDL  = Sync.Countdown_latch
 
 module Test (Stack : STACK) = struct
@@ -83,14 +83,14 @@ module Test (Stack : STACK) = struct
     (* initialize work *)
     let rec produce id q = function
       | 0 -> ()
-      | i -> 
+      | i ->
           let v = Random.int 1000 in
-          Stack.push q v; 
+          Stack.push q v;
           produce id q (i-1)
     in
     let rec consume = function
       | 0 -> ()
-      | i -> 
+      | i ->
           let _ = Stack.pop q1 q2 in
           consume (i-1)
     in
@@ -105,14 +105,14 @@ module Test (Stack : STACK) = struct
     run (CDL.await b) ()
 end
 
-module Data = Reagents_data.Make(Reagents)
-module T = Treiber_stack.Make(Reagents)
+module Data = Reagents.Data
+module T = Data.Treiber_stack
 
 module M1 : STACK = struct
   type t = int T.t
   let create () = (T.create (), T.create ())
   let push s v = Reagents.run (T.push s) v
-  let pop s1 s2 = 
+  let pop s1 s2 =
     let a = Reagents.run (T.pop s1) () in
     let b = Reagents.run (T.pop s2) () in
     (a,b)
@@ -122,7 +122,7 @@ module M2 : STACK = struct
   type t = int T.t
   let create () = (T.create (), T.create ())
   let push s v = Reagents.run (T.push s) v
-  let pop s1 s2 = Reagents.run (T.pop s1 <*> T.pop s2) () 
+  let pop s1 s2 = Reagents.run (T.pop s1 <*> T.pop s2) ()
 end
 
 module M3 : STACK = struct
@@ -130,7 +130,7 @@ module M3 : STACK = struct
   let create () = (T.create (), T.create ())
   let push s v = Reagents.run (T.push s) v
   let pop s1 s2 = Reagents.run (
-    (T.pop s1 >>> lift (fun v -> ()) >>> T.pop s2 >>> lift (fun v -> (0,0))) 
+    (T.pop s1 >>> lift (fun v -> ()) >>> T.pop s2 >>> lift (fun v -> (0,0)))
      <+> (T.pop s2 >>> lift (fun v -> ()) >>> T.pop s1 >>> lift (fun v -> (0,0))) ) ()
 end
 

@@ -90,7 +90,7 @@ module Benchmark = struct
     get_mean_sd r
 end
 
-module Sync = Reagents_sync.Make(Reagents)
+module Sync = Reagents.Sync
 module CDL  = Sync.Countdown_latch
 
 module Test (Q : STACK) = struct
@@ -120,7 +120,7 @@ module Test (Q : STACK) = struct
     run (CDL.await b) ()
 end
 
-module Data = Reagents_data.Make(Reagents)
+module Data = Reagents.Data
 
 let num_runs = 10
 

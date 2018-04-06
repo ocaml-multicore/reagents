@@ -40,7 +40,7 @@ module Reagents = Reagents.Make (S)
 open Reagents
 open Channel
 
-module Sync = Reagents_sync.Make(Reagents)
+module Sync = Reagents.Sync
 module CDL  = Sync.Countdown_latch
 
 open Printf
