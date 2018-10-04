@@ -50,7 +50,7 @@ module Make (S : sig
   let fork f        = perform (Fork f)
   let fork_on f qid = perform (ForkOn (f, qid))
   let yield ()      = perform Yield
-  let get_tid ()    = perform GetTid  
+  let get_tid ()    = perform GetTid
 
   let num_threads = Kcas.ref 0
 
@@ -65,9 +65,9 @@ module Make (S : sig
     Hashtbl.add dom_id_to_qid_map dom_id (!first_unmapped_qid);
     first_unmapped_qid := !first_unmapped_qid + 1
 
-  let get_qid dom_id =
+  let get_qid () =
     let b = Kcas.Backoff.create () in
-    let rec loop () = try Hashtbl.find dom_id_to_qid_map (Domain.self ()) with
+    let rec loop () = try Hashtbl.find dom_id_to_qid_map (Domain.self()) with
       | Not_found -> Kcas.Backoff.once b; loop ()
     in loop ()
 
@@ -116,7 +116,7 @@ module Make (S : sig
               end
             else
               begin
-                enqueue (continue k) current_qid; 
+                enqueue (continue k) current_qid;
                 spawn f (fresh_tid ())
               end
               | effect (ForkOn (f, qid)) k ->
@@ -127,7 +127,7 @@ module Make (S : sig
                 end
               else
                 begin
-                  enqueue (continue k) qid; 
+                  enqueue (continue k) qid;
                   spawn f (fresh_tid ())
                 end
         | effect Yield k -> enqueue (continue k) current_qid; dequeue current_qid
