@@ -144,7 +144,7 @@ module Make (S : sig
       in loop ()
     in
     add_dom_to_qid_map (Domain.self ());
-    for i = 1 to num_domains - 1 do
+    for _i = 1 to num_domains - 1 do
       let new_domain = Domain.spawn worker in
         add_dom_to_qid_map (Domain.get_id new_domain)
     done;

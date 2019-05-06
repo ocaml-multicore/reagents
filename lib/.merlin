@@ -1,7 +1,0 @@
-B /home/kc/.opam/4.06.1+multicore/lib/kcas
-B /home/kc/.opam/4.06.1+multicore/lib/lockfree
-B ../_build/default/lib/.reagents.objs
-S /home/kc/.opam/4.06.1+multicore/lib/kcas
-S /home/kc/.opam/4.06.1+multicore/lib/lockfree
-S .
-FLG -open Reagents__ -w -40

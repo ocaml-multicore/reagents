@@ -6,7 +6,7 @@ module type REF_CHANNEL = sig
   val recv : 'a channel -> (unit,'a) reagent
 end
 
-module Ref_channel(Reagents : Reagents.S) 
+module Ref_channel(Reagents : Reagents.S)
   : REF_CHANNEL with type ('a,'b) reagent = ('a,'b) Reagents.t = struct
 
   type ('a,'b) reagent = ('a,'b) Reagents.t
@@ -18,13 +18,13 @@ module Ref_channel(Reagents : Reagents.S)
   let mk_chan () = Ref.mk_ref None
 
   let send r =
-    Ref.upd r (fun st v -> 
+    Ref.upd r (fun st v ->
       match st with
       | None -> Some (Some v, ())
       | _ -> None)
 
-  let recv r = 
-    Ref.upd r (fun st v ->
+  let recv r =
+    Ref.upd r (fun st _ ->
       match st with
       | None -> None
       | Some v -> Some (None, v))
@@ -44,7 +44,7 @@ open Channel
 
 let id_str () = sprintf "%d:%d" (get_qid ()) (get_tid ())
 
-let main () = 
+let main () =
   let c = mk_chan () in
   fork (fun () -> Printf.printf "%d\n" (run (recv c) ()));
   run (send c) 10

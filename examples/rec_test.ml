@@ -1,4 +1,3 @@
-open Printf
 module Scheduler = Sched_ws.Make(
   struct
     let num_domains = 4
@@ -14,9 +13,9 @@ module CDL = Sync.Countdown_latch
 
 let flip f a b = f b a
 
-let rec lock_and_call l i = 
-  flip run () @@ RLock.acq l ; 
-  callback l i ; 
+let rec lock_and_call l i =
+  flip run () @@ RLock.acq l ;
+  callback l i ;
   ignore (flip run () @@ RLock.rel l)
 and callback l i = if i > 0 then lock_and_call l (i - 1)
 

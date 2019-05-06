@@ -114,7 +114,7 @@ module Test (Q : STACK) = struct
       Printf.printf "%d\n%!" i;
       match Q.pop q with
       | None -> print_string @@ sprintf "[%d] consumed=%d\n%!" (S.get_qid ()) i
-      | Some v ->
+      | Some _ ->
           Printf.printf "i+1 = %d\n" (i+1);
           consume (i+1)
     in

@@ -1,5 +1,5 @@
 all:
-	jbuilder build @install
+	dune build @install
 
 clean:
-	jbuilder clean
+	dune clean

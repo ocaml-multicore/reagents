@@ -130,8 +130,8 @@ module M3 : STACK = struct
   let create () = (T.create (), T.create ())
   let push s v = Reagents.run (T.push s) v
   let pop s1 s2 = Reagents.run (
-    (T.pop s1 >>> lift (fun v -> ()) >>> T.pop s2 >>> lift (fun v -> (0,0)))
-     <+> (T.pop s2 >>> lift (fun v -> ()) >>> T.pop s1 >>> lift (fun v -> (0,0))) ) ()
+    (T.pop s1 >>> lift (fun _ -> ()) >>> T.pop s2 >>> lift (fun _ -> (0,0)))
+     <+> (T.pop s2 >>> lift (fun _ -> ()) >>> T.pop s1 >>> lift (fun _ -> (0,0))) ) ()
 end
 
 
