@@ -18,8 +18,8 @@ type 'a ref = 'a Kcas.ref
 let ref = Kcas.ref
 let get = Kcas.get
 
-type cas_kind = 
-  | Real of Kcas.t 
+type cas_kind =
+  | Real of Kcas.t
   | Imm of bool
 
 type t = cas_kind * (unit -> unit)
@@ -28,6 +28,7 @@ let cas r old_v new_v post_commit = (Real (Kcas.mk_cas r old_v new_v), post_comm
 
 let is_on_ref (c, _) r =
   match c with
+  (* | Real cas -> Kcas.is_on_ref cas r *)
   | Real cas -> Kcas.is_on_ref cas r
   | _ -> false
 

@@ -66,8 +66,8 @@ module Make (Sched : Scheduler.S) : S with
 
   type ('a,'b) endpoint =
     { name : string;
-      outgoing: ('a,'b) message Lockfree.MSQueue.t;
-      incoming: ('b,'a) message Lockfree.MSQueue.t }
+      outgoing: ('a,'b) message Lockfree.Michael_scott_queue.t;
+      incoming: ('b,'a) message Lockfree.Michael_scott_queue.t }
 
   let mk_chan ?name () =
     let name =
@@ -75,8 +75,8 @@ module Make (Sched : Scheduler.S) : S with
       | None -> ""
       | Some n -> n
     in
-    let l1 = Lockfree.MSQueue.create () in
-    let l2 = Lockfree.MSQueue.create () in
+    let l1 = Lockfree.Michael_scott_queue.create () in
+    let l2 = Lockfree.Michael_scott_queue.create () in
     {name = "+" ^ name; incoming = l1; outgoing = l2},
     {name = "-" ^ name; incoming = l2; outgoing = l1}
 
@@ -87,7 +87,7 @@ module Make (Sched : Scheduler.S) : S with
       let {name = _name; outgoing; incoming} = ep in
       (* Search for matching offers *)
       let rec try_from cursor retry =
-        match Lockfree.MSQueue.next cursor with
+        match Lockfree.Michael_scott_queue.next cursor with
         | None -> if retry then Retry else Block
         | Some (Message (sender_offer,exchange), cursor) ->
             let same_offer o = function
@@ -113,13 +113,13 @@ module Make (Sched : Scheduler.S) : S with
           | Some offer (* when (not k.may_sync) *) ->
 (*               Printf.printf "[%d,%s] pushing offer %d\n"  *)
 (*                 (Sched.get_tid ()) name @@ Offer.get_id offer; *)
-              Lockfree.MSQueue.push outgoing (mk_message a rx k offer)
+             Lockfree.Michael_scott_queue.push outgoing (mk_message a rx k offer)
           | _ -> ()
         end;
 (*         Printf.printf "[%d,%s] checking..\n" (Sched.get_tid()) name; *)
-        Lockfree.MSQueue.clean_until incoming message_is_active;
-        if Lockfree.MSQueue.is_empty incoming then Block
-        else try_from (Lockfree.MSQueue.snapshot incoming) false )
+        Lockfree.Michael_scott_queue.clean_until incoming message_is_active;
+        if Lockfree.Michael_scott_queue.is_empty incoming then Block
+        else try_from (Lockfree.Michael_scott_queue.snapshot incoming) false )
     in
     fun ep k ->
       { always_commits = false;

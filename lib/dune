@@ -1,4 +1,4 @@
 (library
  (name        reagents)
  (public_name reagents)
- (libraries   kcas lockfree))
+ (libraries   lockfree domainslib kcas))

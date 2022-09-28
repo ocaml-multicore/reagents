@@ -206,8 +206,8 @@ module Make (Sched: Scheduler.S) : S
     | Block -> with_offer pause r v
 
   let run r v =
-    let b = Kcas.Backoff.create () in
-    let pause () = Kcas.Backoff.once b in
+    let b = Lockfree.Backoff.create () in
+    let pause () = Lockfree.Backoff.once b in
     without_offer pause r v
 
   let can_cas_immediate k rx = function

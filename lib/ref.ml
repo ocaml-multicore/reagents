@@ -37,20 +37,20 @@ module Make(Sched: Scheduler.S)
 
   type 'a ref =
     { data : 'a Kcas.ref;
-      offers : mono_offer Lockfree.MSQueue.t }
+      offers : mono_offer Lockfree.Michael_scott_queue.t }
 
   type ('a,'b) reagent = ('a,'b) Core.t
 
   open Core
 
-  let mk_ref v = { data = Kcas.ref v; offers = Lockfree.MSQueue.create () }
+  let mk_ref v = { data = Kcas.ref v; offers = Lockfree.Michael_scott_queue.create () }
 
   let rec read : 'a 'r. 'a ref -> ('a,'r) reagent -> (unit,'r) reagent =
     fun r k ->
       let try_react () rx o =
         let () = match o with
           | None -> ()
-          | Some ov -> Lockfree.MSQueue.push r.offers (Offer ov)
+          | Some ov -> Lockfree.Michael_scott_queue.push r.offers (Offer ov)
         in
         let v = Kcas.get r.data in
         k.try_react v rx o
@@ -65,7 +65,7 @@ module Make(Sched: Scheduler.S)
 
   let wake_all q =
     let rec loop () =
-      match Lockfree.MSQueue.pop q with
+      match Lockfree.Michael_scott_queue.pop q with
       | None -> ()
       | Some (Offer ov) -> ( ignore (Offer.rescind ov); loop () )
     in loop ()
@@ -80,13 +80,13 @@ module Make(Sched: Scheduler.S)
         match f ov b with
         | None -> Block
         | Some (nv, c) ->
-            if Kcas.cas r.data ov nv then
+           if Kcas.cas r.data ov nv then
               ( wake_all r.offers; k.try_react c rx o )
-            else Retry
+           else Retry
       else
         let () = match o with
           | None -> ()
-          | Some ov -> Lockfree.MSQueue.push r.offers (Offer ov)
+          | Some ov -> Lockfree.Michael_scott_queue.push r.offers (Offer ov)
         in
         let ov = Kcas.get r.data in
         match f ov b with
