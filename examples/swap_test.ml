@@ -42,7 +42,7 @@ let main () =
 
   (* Test 2 *)
   yield ();
-  Unix.sleep 1;
+  Unix.sleepf 0.1;
   printf "**** Test 2 ****\n%!";
   let ep1, ep2 = mk_chan () in
   fork (fun () ->
@@ -52,7 +52,7 @@ let main () =
 
   (* Test 3 *)
   yield ();
-  Unix.sleep 1;
+  Unix.sleepf 0.1;
   printf "**** Test 3 ****\n%!";
   let ep1, ep2 = mk_chan () in
   fork (fun () ->
@@ -61,7 +61,7 @@ let main () =
 
   (* Test 4 *)
   yield ();
-  Unix.sleep 1;
+  Unix.sleepf 0.1;
   printf "**** Test 4 ****\n%!";
   let ep1, ep2 = mk_chan () in
   fork (fun () ->
@@ -73,4 +73,4 @@ let main () =
 
   ()
 
-let () = Scheduler.run main
+let () = Scheduler.run_allow_deadlock main

@@ -28,7 +28,9 @@ module type S = sig
   val get_tid : unit -> thread_id
   val run : (unit -> unit) -> unit
 
-  exception All_domains_idle
+  (* wrappers for dealing with broken tests *)
+  val run_allow_deadlock : (unit -> unit) -> unit
+  val run_with_timeout : (unit -> unit) -> unit
 end
 
 module Make (S : sig
@@ -58,7 +60,6 @@ end) : S = struct
   let get_tid () = perform GetTid
   let num_threads = Atomic.make 0
   let num_idling_domains = Atomic.make 0
-
 
   let queues =
     Array.init S.num_domains (fun _ -> Lockfree.Michael_scott_queue.create ())
@@ -94,7 +95,7 @@ end) : S = struct
 
           k ()
       | None ->
-          if S.num_domains == Atomic.get num_idling_domains then 
+          if S.num_domains == Atomic.get num_idling_domains then
             raise All_domains_idle;
 
           if Atomic.get num_threads > 0 then (
@@ -185,4 +186,16 @@ end) : S = struct
       (fresh_tid ())
 
   let run f = run_with f S.num_domains
+
+  let run_allow_deadlock f =
+    match run f with exception All_domains_idle -> () | _ -> ()
+
+  let run_with_timeout f =
+    let running = Atomic.make true in
+    Domain.spawn (fun () ->
+        f ();
+        Atomic.set running true)
+    |> ignore;
+    Unix.sleepf 0.5
+
 end

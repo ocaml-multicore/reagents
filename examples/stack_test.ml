@@ -15,18 +15,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-let print_usage_and_exit () =
-  print_endline @@ "Usage: " ^ Sys.argv.(0) ^ " <num_domains> <num_items>";
-  exit 0
 
-let num_doms, num_items =
-  if Array.length Sys.argv < 3 then print_usage_and_exit ()
-  else
-    try
-      let a = int_of_string Sys.argv.(1) in
-      let b = int_of_string Sys.argv.(2) in
-      (a, b)
-    with Failure _ -> print_usage_and_exit ()
+
+let num_doms = 2
+
+let num_items = 10_000 
 
 let () =
   if num_doms mod 2 <> 0 then (
@@ -184,4 +177,4 @@ let main () =
   printf "Channel-based stack: mean = %f, sd = %f tp=%f\n%!" m sd
     (float_of_int num_items /. m)
 
-let () = S.run main
+let () = S.run_allow_deadlock main

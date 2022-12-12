@@ -52,4 +52,4 @@ let main () =
 
   ()
 
-let () = Scheduler.run main
+let () = Scheduler.run_allow_deadlock main

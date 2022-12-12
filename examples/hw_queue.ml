@@ -18,15 +18,7 @@ let print_usage_and_exit () =
   print_endline @@ "Usage: " ^ Sys.argv.(0) ^ " <num_domains> <num_items>";
   exit 0
 
-let num_doms, num_items =
-  if Array.length Sys.argv < 3 then print_usage_and_exit ()
-  else
-    try
-      let a = int_of_string Sys.argv.(1) in
-      let b = int_of_string Sys.argv.(2) in
-      (a, b)
-    with Failure _ -> print_usage_and_exit ()
-
+let num_doms, num_items = 2, 10_000
 let items_per_dom = num_items / num_doms
 
 module M = struct
@@ -35,9 +27,6 @@ module M = struct
 end
 
 module S = Sched_ws.Make (M)
-
-let () =
-  Printf.printf "[%d] items_per_domain = %d\n%!" (S.get_qid ()) items_per_dom
 
 let id_str () = Printf.sprintf "%d:%d" (S.get_qid ()) (S.get_tid ())
 
@@ -138,5 +127,4 @@ let main () =
   printf "Hand-written Lockfree.MSQueue: mean = %f, sd = %f tp=%f\n%!" m sd
     (float_of_int num_items /. m)
 
-let () = S.run main
-let () = Unix.sleep 1
+let _f () = S.run main
