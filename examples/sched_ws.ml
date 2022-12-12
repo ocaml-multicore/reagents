@@ -27,6 +27,8 @@ module type S = sig
   val get_qid : unit -> queue_id
   val get_tid : unit -> thread_id
   val run : (unit -> unit) -> unit
+
+  exception All_domains_idle
 end
 
 module Make (S : sig
@@ -46,6 +48,8 @@ end) : S = struct
   type _ Effect.t += Yield : unit Effect.t
   type _ Effect.t += GetTid : thread_id Effect.t
 
+  exception All_domains_idle
+
   let suspend f = perform (Suspend f)
   let resume t v = perform (Resume (t, v))
   let fork f = perform (Fork f)
@@ -53,6 +57,8 @@ end) : S = struct
   let yield () = perform Yield
   let get_tid () = perform GetTid
   let num_threads = Atomic.make 0
+  let num_idling_domains = Atomic.make 0
+
 
   let queues =
     Array.init S.num_domains (fun _ -> Lockfree.Michael_scott_queue.create ())
@@ -81,15 +87,23 @@ end) : S = struct
   let dequeue qid =
     let b = Lockfree.Backoff.create () in
     let queue = get_queue qid in
-    let rec loop () =
+    let rec loop ~idling =
       match Lockfree.Michael_scott_queue.pop queue with
-      | Some k -> k ()
+      | Some k ->
+          if idling then Atomic.decr num_idling_domains;
+
+          k ()
       | None ->
-          if Atomic.get num_threads <> 0 then (
+          if S.num_domains == Atomic.get num_idling_domains then 
+            raise All_domains_idle;
+
+          if Atomic.get num_threads > 0 then (
+            if not idling then Atomic.incr num_idling_domains;
+
             Lockfree.Backoff.once b;
-            loop ())
+            loop ~idling:true)
     in
-    loop ()
+    loop ~idling:false
 
   let rec spawn f (tid : thread_id) =
     let current_qid = get_qid () in
