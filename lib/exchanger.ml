@@ -3,20 +3,21 @@
 
 module type S = sig
   type 'a t
-  type ('a,'b) reagent
-  val create   : ?name:string -> unit -> 'a t
-  val exchange : 'a t -> ('a,'a) reagent
+  type ('a, 'b) reagent
+
+  val create : ?name:string -> unit -> 'a t
+  val exchange : 'a t -> ('a, 'a) reagent
 end
 
-module Make (Base : Base.S) : S
-  with type ('a,'b) reagent = ('a,'b) Base.t = struct
+module Make (Base : Base.S) : S with type ('a, 'b) reagent = ('a, 'b) Base.t =
+struct
+  type ('a, 'b) reagent = ('a, 'b) Base.t
 
-  type ('a,'b) reagent = ('a,'b) Base.t
   module C = Base.Channel
   open Base
 
-  type 'a t = ('a,'a) C.endpoint * ('a,'a) C.endpoint
+  type 'a t = ('a, 'a) C.endpoint * ('a, 'a) C.endpoint
 
-  let create = C.mk_chan 
+  let create = C.mk_chan
   let exchange e = C.swap (fst e) <+> C.swap (snd e)
 end

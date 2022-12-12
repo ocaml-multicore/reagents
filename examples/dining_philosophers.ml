@@ -17,41 +17,34 @@
 
 let print_usage_and_exit () =
   print_endline @@ "Usage: " ^ Sys.argv.(0) ^ " <num_philosophers> <num_rounds>";
-  exit(0)
+  exit 0
 
-let (num_philosophers, num_rounds) =
-  if Array.length Sys.argv < 3 then
-    print_usage_and_exit ()
+let num_philosophers, num_rounds =
+  if Array.length Sys.argv < 3 then print_usage_and_exit ()
   else
     try
-      let a = int_of_string (Sys.argv.(1)) in
-      let b = int_of_string (Sys.argv.(2)) in
-      (a,b)
-    with
-    | Failure _ -> print_usage_and_exit ()
+      let a = int_of_string Sys.argv.(1) in
+      let b = int_of_string Sys.argv.(2) in
+      (a, b)
+    with Failure _ -> print_usage_and_exit ()
 
-module S = Sched_ws.Make (
-  struct
-    let num_domains = num_philosophers
-    let is_affine = true
-  end)
+module S = Sched_ws.Make (struct
+  let num_domains = num_philosophers
+  let is_affine = true
+end)
 
 module Reagents = Reagents.Make (S)
 open Reagents
 open Channel
-
 module Sync = Reagents.Sync
-module CDL  = Sync.Countdown_latch
-
+module CDL = Sync.Countdown_latch
 open Printf
 
-type fork =
-  {drop : (unit,unit) endpoint;
-   take : (unit,unit) endpoint}
+type fork = { drop : (unit, unit) endpoint; take : (unit, unit) endpoint }
 
 let mk_fork () =
   let drop, take = mk_chan () in
-  {drop; take}
+  { drop; take }
 
 let drop f = swap f.drop
 let take f = swap f.take

@@ -19,7 +19,7 @@ module type S = sig
   type 'a ref
   (** The type of shared memory reference. *)
 
-  type ('a,'b) reagent
+  type ('a, 'b) reagent
   (** The type of reagent. *)
 
   val mk_ref : 'a -> 'a ref
@@ -42,7 +42,7 @@ module type S = sig
   (** [cas_imm r e u] attempts to atomically update [r] from [e] to [u]. If
       successful, the function returns [true]. Otherwise, returns [false]. *)
 
-  val upd : 'a ref -> ('a -> 'b -> ('a *'c) option) -> ('b,'c) reagent
+  val upd : 'a ref -> ('a -> 'b -> ('a * 'c) option) -> ('b, 'c) reagent
   (** [upd r f] returns a reagent value which when run applies [f] to the
       current value [c] of the reference and the input value of the reagent. If
       [f] returns, [None] the protocol is retried. If [f] returns [Some v], the
@@ -53,5 +53,5 @@ module type S = sig
       suspended until there is a possibility of success. *)
 end
 
-module Make(Sched: Scheduler.S)
-  : S with type ('a,'b) reagent = ('a,'b) Core.Make(Sched).t
+module Make (Sched : Scheduler.S) :
+  S with type ('a, 'b) reagent = ('a, 'b) Core.Make(Sched).t

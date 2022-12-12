@@ -17,17 +17,14 @@
 
 let print_usage_and_exit () =
   print_endline @@ "Usage: " ^ Sys.argv.(0) ^ " <num_items>";
-  exit(0)
+  exit 0
 
 let num_items =
-  if Array.length Sys.argv < 2 then
-    print_usage_and_exit ()
+  if Array.length Sys.argv < 2 then print_usage_and_exit ()
   else
-    try int_of_string (Sys.argv.(1)) with
-    | Failure _ -> print_usage_and_exit ()
+    try int_of_string Sys.argv.(1) with Failure _ -> print_usage_and_exit ()
 
 let items_per_dom = num_items / 2
-
 let () = Printf.printf "items_per_domain = %d\n%!" @@ items_per_dom
 
 module M = struct
@@ -36,16 +33,14 @@ module M = struct
 end
 
 module S = Sched_ws.Make (M)
-
 module Reagents = Reagents.Make (S)
 open Reagents
-
 open Printf
 
 module Benchmark = struct
   let get_mean_sd l =
-    let get_mean l = (List.fold_right (fun a v -> a +. v) l 0.) /.
-                (float_of_int @@ List.length l)
+    let get_mean l =
+      List.fold_right (fun a v -> a +. v) l 0. /. (float_of_int @@ List.length l)
     in
     let mean = get_mean l in
     let sd = get_mean @@ List.map (fun v -> abs_float (v -. mean) ** 2.) l in
@@ -53,13 +48,13 @@ module Benchmark = struct
 
   let benchmark f n =
     let rec run acc = function
-    | 0 -> acc
-    | n ->
-        Gc.full_major();
-        let t1 = Unix.gettimeofday () in
-        let () = f () in
-        let d = Unix.gettimeofday () -. t1 in
-        run (d::acc) (n-1)
+      | 0 -> acc
+      | n ->
+          Gc.full_major ();
+          let t1 = Unix.gettimeofday () in
+          let () = f () in
+          let d = Unix.gettimeofday () -. t1 in
+          run (d :: acc) (n - 1)
     in
     let r = run [] n in
     get_mean_sd r
@@ -67,18 +62,18 @@ end
 
 module type STACK = sig
   type t
+
   val create : unit -> t * t
-  val push   : t -> int -> unit
-  val pop    : t -> t -> int * int
+  val push : t -> int -> unit
+  val pop : t -> t -> int * int
 end
 
 module Sync = Reagents.Sync
-module CDL  = Sync.Countdown_latch
+module CDL = Sync.Countdown_latch
 
 module Test (Stack : STACK) = struct
-
   let run items_per_domain =
-    let q1,q2= Stack.create () in
+    let q1, q2 = Stack.create () in
     let b = CDL.create 3 in
     (* initialize work *)
     let rec produce id q = function
@@ -86,20 +81,24 @@ module Test (Stack : STACK) = struct
       | i ->
           let v = Random.int 1000 in
           Stack.push q v;
-          produce id q (i-1)
+          produce id q (i - 1)
     in
     let rec consume = function
       | 0 -> ()
       | i ->
           let _ = Stack.pop q1 q2 in
-          consume (i-1)
+          consume (i - 1)
     in
-    S.fork_on (fun () ->
-      produce 1 q1 items_per_domain;
-      run (CDL.count_down b) ()) 1;
-    S.fork_on (fun () ->
-      produce 2 q2 items_per_domain;
-      run (CDL.count_down b) ()) 2;
+    S.fork_on
+      (fun () ->
+        produce 1 q1 items_per_domain;
+        run (CDL.count_down b) ())
+      1;
+    S.fork_on
+      (fun () ->
+        produce 2 q2 items_per_domain;
+        run (CDL.count_down b) ())
+      2;
     consume items_per_domain;
     run (CDL.count_down b) ();
     run (CDL.await b) ()
@@ -110,16 +109,19 @@ module T = Data.Treiber_stack
 
 module M1 : STACK = struct
   type t = int T.t
+
   let create () = (T.create (), T.create ())
   let push s v = Reagents.run (T.push s) v
+
   let pop s1 s2 =
     let a = Reagents.run (T.pop s1) () in
     let b = Reagents.run (T.pop s2) () in
-    (a,b)
+    (a, b)
 end
 
 module M2 : STACK = struct
   type t = int T.t
+
   let create () = (T.create (), T.create ())
   let push s v = Reagents.run (T.push s) v
   let pop s1 s2 = Reagents.run (T.pop s1 <*> T.pop s2) ()
@@ -127,28 +129,38 @@ end
 
 module M3 : STACK = struct
   type t = int T.t
+
   let create () = (T.create (), T.create ())
   let push s v = Reagents.run (T.push s) v
-  let pop s1 s2 = Reagents.run (
-    (T.pop s1 >>> lift (fun _ -> ()) >>> T.pop s2 >>> lift (fun _ -> (0,0)))
-     <+> (T.pop s2 >>> lift (fun _ -> ()) >>> T.pop s1 >>> lift (fun _ -> (0,0))) ) ()
+
+  let pop s1 s2 =
+    Reagents.run
+      (T.pop s1
+      >>> lift (fun _ -> ())
+      >>> T.pop s2
+      >>> lift (fun _ -> (0, 0))
+      <+> (T.pop s2
+          >>> lift (fun _ -> ())
+          >>> T.pop s1
+          >>> lift (fun _ -> (0, 0))))
+      ()
 end
 
-
 let main () =
-  let module M = Test(M2) in
-  let (m,sd) = Benchmark.benchmark (fun () -> M.run items_per_dom) 5 in
+  let module M = Test (M2) in
+  let m, sd = Benchmark.benchmark (fun () -> M.run items_per_dom) 5 in
   printf "<*>: mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m);
   Gc.full_major ();
 
-  let module M = Test(M3) in
-  let (m,sd) = Benchmark.benchmark (fun () -> M.run items_per_dom) 5 in
+  let module M = Test (M3) in
+  let m, sd = Benchmark.benchmark (fun () -> M.run items_per_dom) 5 in
   printf "<+>: mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m);
   Gc.full_major ();
 
-  let module M = Test(M1) in
-  let (m,sd) = Benchmark.benchmark (fun () -> M.run items_per_dom) 5 in
-  printf "Non-atomic: mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m);
+  let module M = Test (M1) in
+  let m, sd = Benchmark.benchmark (fun () -> M.run items_per_dom) 5 in
+  printf "Non-atomic: mean = %f, sd = %f tp=%f\n%!" m sd
+    (float_of_int num_items /. m);
   Gc.full_major ();
 
   ()

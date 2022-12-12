@@ -17,18 +17,18 @@
 
 module type S = sig
   type 'a t
-  val make       : unit -> 'a t
-  val equal      : 'a t -> 'b t -> bool
-  val is_active  : 'a t -> bool
-  val get_id     : 'a t -> int
-  val wait       : 'a t -> unit
-  val complete   : 'a t -> 'a -> PostCommitCas.t
-  val rescind    : 'a t -> 'a option
+
+  val make : unit -> 'a t
+  val equal : 'a t -> 'b t -> bool
+  val is_active : 'a t -> bool
+  val get_id : 'a t -> int
+  val wait : 'a t -> unit
+  val complete : 'a t -> 'a -> PostCommitCas.t
+  val rescind : 'a t -> 'a option
   val get_result : 'a t -> 'a option
 end
 
 module Make (Sched : Scheduler.S) : S = struct
-
   type 'a status =
     | Empty
     | Waiting of unit Sched.cont
@@ -38,61 +38,56 @@ module Make (Sched : Scheduler.S) : S = struct
   type 'a t = 'a status Kcas.ref
 
   let make () = Kcas.ref Empty
-
   let get_id r = Kcas.get_id r
-
   let equal o1 o2 = get_id o1 = get_id o2
 
-  let is_active o = match Kcas.get o with
+  let is_active o =
+    match Kcas.get o with
     | Empty | Waiting _ -> true
     | Rescinded | Completed _ -> false
 
-  let wait r = Sched.suspend (fun k ->
-    let cas_result =
-      Kcas.map r (fun v ->
-        match v with
-        | Empty -> Some (Waiting k)
-        | Waiting _ -> failwith "Offer.wait(1)"
-        | Completed _ | Rescinded -> None)
-    in
-    match cas_result with
-    (* If CAS was a success, then it is no longer this thread's responsibiliy to
-     * resume itself. *)
-    | Kcas.Success _ -> None
-    (* If the CAS failed, then another thread has already changed the offer from
-     * [Empty] to [Completed] or [Rescinded]. In this case, thread shouldn't
-     * wait. *)
-    | Kcas.Aborted -> Some ()
-    | Kcas.Failed  -> failwith "Offer.wait(2)")
+  let wait r =
+    Sched.suspend (fun k ->
+        let cas_result =
+          Kcas.map r (fun v ->
+              match v with
+              | Empty -> Some (Waiting k)
+              | Waiting _ -> failwith "Offer.wait(1)"
+              | Completed _ | Rescinded -> None)
+        in
+        match cas_result with
+        (* If CAS was a success, then it is no longer this thread's responsibiliy to
+         * resume itself. *)
+        | Kcas.Success _ -> None
+        (* If the CAS failed, then another thread has already changed the offer from
+         * [Empty] to [Completed] or [Rescinded]. In this case, thread shouldn't
+         * wait. *)
+        | Kcas.Aborted -> Some ()
+        | Kcas.Failed -> failwith "Offer.wait(2)")
 
   let complete r new_v =
     let old_v = Kcas.get r in
     match old_v with
     | Waiting k ->
-        PostCommitCas.cas r old_v (Completed new_v) (fun () -> Sched.resume k ())
-    | Empty ->
-        PostCommitCas.cas r old_v (Completed new_v) (fun () -> ())
+        PostCommitCas.cas r old_v (Completed new_v) (fun () ->
+            Sched.resume k ())
+    | Empty -> PostCommitCas.cas r old_v (Completed new_v) (fun () -> ())
     | Rescinded | Completed _ -> PostCommitCas.return false (fun () -> ())
 
   let rescind r =
     let cas_result =
       Kcas.map r (fun v ->
-        match v with
-        | Empty | Waiting _ -> Some Rescinded
-        | Rescinded | Completed _ -> None)
+          match v with
+          | Empty | Waiting _ -> Some Rescinded
+          | Rescinded | Completed _ -> None)
     in
-    ( begin
-        match cas_result with
-        | Kcas.Success (Waiting t) -> Sched.resume t ()
-        | _ -> ()
-      end;
-      match Kcas.get r with
-      | Rescinded -> None
-      | Completed v -> Some v
-      | _ -> failwith "Offer.rescind")
-
-  let get_result r =
+    (match cas_result with
+    | Kcas.Success (Waiting t) -> Sched.resume t ()
+    | _ -> ());
     match Kcas.get r with
+    | Rescinded -> None
     | Completed v -> Some v
-    | _ -> None
+    | _ -> failwith "Offer.rescind"
+
+  let get_result r = match Kcas.get r with Completed v -> Some v | _ -> None
 end

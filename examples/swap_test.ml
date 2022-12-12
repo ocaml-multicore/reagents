@@ -15,11 +15,12 @@
  *)
 
 open Printf
-module Scheduler = Sched_ws.Make(
-  struct
-    let num_domains = 1
-    let is_affine = false
-  end)
+
+module Scheduler = Sched_ws.Make (struct
+  let num_domains = 1
+  let is_affine = false
+end)
+
 module Reagents = Reagents.Make (Scheduler)
 open Scheduler
 open Reagents
@@ -32,38 +33,41 @@ let main () =
 
   (* Test 1 *)
   printf "**** Test 1 ****\n%!";
-  let (ep1,ep2) = mk_chan () in
-  let (fp1,fp2) = mk_chan () in
-  fork (fun () -> printf "[%s] %d\n%!" (id_str ()) @@ run (swap fp1 >>> swap ep1) 1);
+  let ep1, ep2 = mk_chan () in
+  let fp1, fp2 = mk_chan () in
+  fork (fun () ->
+      printf "[%s] %d\n%!" (id_str ()) @@ run (swap fp1 >>> swap ep1) 1);
   fork (fun () -> printf "[%s] %d\n%!" (id_str ()) @@ run (swap fp2) 0);
   printf "[%s] %d\n%!" (id_str ()) @@ run (swap ep2) 2;
 
   (* Test 2 *)
   yield ();
-  Unix.sleep (1);
+  Unix.sleep 1;
   printf "**** Test 2 ****\n%!";
-  let (ep1,ep2) = mk_chan () in
-  fork (fun () -> printf "[%s] %d\n%!" (id_str ()) @@ run (swap ep1 >>> swap ep1) 1);
+  let ep1, ep2 = mk_chan () in
+  fork (fun () ->
+      printf "[%s] %d\n%!" (id_str ()) @@ run (swap ep1 >>> swap ep1) 1);
   fork (fun () -> printf "[%s] %d\n%!" (id_str ()) @@ run (swap ep2) 0);
   printf "[%s] %d\n%!" (id_str ()) @@ run (swap ep2) 2;
 
   (* Test 3 *)
   yield ();
-  Unix.sleep (1);
+  Unix.sleep 1;
   printf "**** Test 3 ****\n%!";
-  let (ep1,ep2) = mk_chan () in
+  let ep1, ep2 = mk_chan () in
   fork (fun () ->
-    printf "[%s] %d\n%!" (id_str ()) @@ run (swap ep1 <+> swap ep2) 0);
+      printf "[%s] %d\n%!" (id_str ()) @@ run (swap ep1 <+> swap ep2) 0);
   printf "[%s] %d\n%!" (id_str ()) @@ run (swap ep2) 1;
 
   (* Test 4 *)
   yield ();
-  Unix.sleep (1);
+  Unix.sleep 1;
   printf "**** Test 4 ****\n%!";
-  let (ep1,ep2) = mk_chan () in
+  let ep1, ep2 = mk_chan () in
   fork (fun () ->
-    printf "[%s] %d\n%!" (id_str ()) @@ run (swap ep1 >>> swap ep1) 0);
-  printf "Will fail! Reagents are not as powerful as communicating transactions!\n%!";
+      printf "[%s] %d\n%!" (id_str ()) @@ run (swap ep1 >>> swap ep1) 0);
+  printf
+    "Will fail! Reagents are not as powerful as communicating transactions!\n%!";
   printf "[%s] %d\n%!" (id_str ()) @@ run (swap ep2 >>> swap ep2) 1;
   printf "should not see this!\n";
 

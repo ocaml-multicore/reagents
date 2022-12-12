@@ -17,74 +17,87 @@
 
 module type S = sig
   type 'a ref
-  type ('a,'b) reagent
-  val mk_ref   : 'a -> 'a ref
-  val read     : 'a ref -> (unit, 'a) reagent
+  type ('a, 'b) reagent
+
+  val mk_ref : 'a -> 'a ref
+  val read : 'a ref -> (unit, 'a) reagent
   val read_imm : 'a ref -> 'a
-  val cas      : 'a ref -> 'a -> 'a -> (unit, unit) reagent
-  val cas_imm  : 'a ref -> 'a -> 'a -> bool
-  val upd      : 'a ref -> ('a -> 'b -> ('a *'c) option) -> ('b,'c) reagent
+  val cas : 'a ref -> 'a -> 'a -> (unit, unit) reagent
+  val cas_imm : 'a ref -> 'a -> 'a -> bool
+  val upd : 'a ref -> ('a -> 'b -> ('a * 'c) option) -> ('b, 'c) reagent
 end
 
-module Make(Sched: Scheduler.S)
-  : S with type ('a,'b) reagent = ('a,'b) Core.Make(Sched).t = struct
-
+module Make (Sched : Scheduler.S) :
+  S with type ('a, 'b) reagent = ('a, 'b) Core.Make(Sched).t = struct
   module Offer = Offer.Make (Sched)
   module Core = Core.Make (Sched)
   module Reaction = Reaction.Make (Sched)
 
   type mono_offer = Offer : 'a Offer.t -> mono_offer
 
-  type 'a ref =
-    { data : 'a Kcas.ref;
-      offers : mono_offer Lockfree.Michael_scott_queue.t }
+  type 'a ref = {
+    data : 'a Kcas.ref;
+    offers : mono_offer Lockfree.Michael_scott_queue.t;
+  }
 
-  type ('a,'b) reagent = ('a,'b) Core.t
+  type ('a, 'b) reagent = ('a, 'b) Core.t
 
   open Core
 
-  let mk_ref v = { data = Kcas.ref v; offers = Lockfree.Michael_scott_queue.create () }
+  let mk_ref v =
+    { data = Kcas.ref v; offers = Lockfree.Michael_scott_queue.create () }
 
-  let rec read : 'a 'r. 'a ref -> ('a,'r) reagent -> (unit,'r) reagent =
-    fun r k ->
-      let try_react () rx o =
-        let () = match o with
-          | None -> ()
-          | Some ov -> Lockfree.Michael_scott_queue.push r.offers (Offer ov)
-        in
-        let v = Kcas.get r.data in
-        k.try_react v rx o
+  let rec read : 'a 'r. 'a ref -> ('a, 'r) reagent -> (unit, 'r) reagent =
+   fun r k ->
+    let try_react () rx o =
+      let () =
+        match o with
+        | None -> ()
+        | Some ov -> Lockfree.Michael_scott_queue.push r.offers (Offer ov)
       in
-        { always_commits = k.always_commits;
-          compose = (fun next -> read r (k.compose next));
-          try_react }
+      let v = Kcas.get r.data in
+      k.try_react v rx o
+    in
+    {
+      always_commits = k.always_commits;
+      compose = (fun next -> read r (k.compose next));
+      try_react;
+    }
 
   let read r = read r Core.commit
-
   let read_imm r = Kcas.get r.data
 
   let wake_all q =
     let rec loop () =
       match Lockfree.Michael_scott_queue.pop q with
       | None -> ()
-      | Some (Offer ov) -> ( ignore (Offer.rescind ov); loop () )
-    in loop ()
+      | Some (Offer ov) ->
+          ignore (Offer.rescind ov);
+          loop ()
+    in
+    loop ()
 
-  let cas_imm r expect update =
-    Kcas.cas r.data expect update
+  let cas_imm r expect update = Kcas.cas r.data expect update
 
-  let rec upd : 'a 'b 'c 'r. 'a ref -> ('a -> 'b -> ('a * 'c) option) -> ('c,'r) reagent -> ('b,'r) reagent =
+  let rec upd :
+            'a 'b 'c 'r.
+            'a ref ->
+            ('a -> 'b -> ('a * 'c) option) ->
+            ('c, 'r) reagent ->
+            ('b, 'r) reagent =
     let try_react r f k b rx o =
       if can_cas_immediate k rx o then
         let ov = Kcas.get r.data in
         match f ov b with
         | None -> Block
         | Some (nv, c) ->
-           if Kcas.cas r.data ov nv then
-              ( wake_all r.offers; k.try_react c rx o )
-           else Retry
+            if Kcas.cas r.data ov nv then (
+              wake_all r.offers;
+              k.try_react c rx o)
+            else Retry
       else
-        let () = match o with
+        let () =
+          match o with
           | None -> ()
           | Some ov -> Lockfree.Michael_scott_queue.push r.offers (Offer ov)
         in
@@ -92,16 +105,21 @@ module Make(Sched: Scheduler.S)
         match f ov b with
         | None -> Block
         | Some (nv, c) ->
-            let cas = PostCommitCas.cas r.data ov nv (fun () -> wake_all r.offers) in
+            let cas =
+              PostCommitCas.cas r.data ov nv (fun () -> wake_all r.offers)
+            in
             k.try_react c (Reaction.with_CAS rx cas) o
     in
     fun r f k ->
-      { always_commits = false;
+      {
+        always_commits = false;
         compose = (fun next -> upd r f (k.compose next));
-        try_react = try_react r f k}
+        try_react = try_react r f k;
+      }
 
   let upd r f = upd r f Core.commit
 
-  let cas r expect update = upd r (fun current () ->
-    if current = expect then Some (update, ()) else None)
+  let cas r expect update =
+    upd r (fun current () ->
+        if current = expect then Some (update, ()) else None)
 end

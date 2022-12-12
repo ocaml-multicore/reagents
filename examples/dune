@@ -1,46 +1,42 @@
 (executables
- (names 
-   counter_test
-   dining_philosophers
-   eli_stack 
-   lock_test 
-   ref_channel
-   ref_test 
-   swap_test2
-   queue_test 
-   sat
-
-   ; Not working - usually they hang when running
-   reagent_queue_test
-   rec_test
-   stack_test
-   stack_test_compose 
-   swap_test 
-   three_way 
-   two_way
-   hw_queue
- )
+ (names
+  counter_test
+  dining_philosophers
+  eli_stack
+  lock_test
+  ref_channel
+  ref_test
+  swap_test2
+  queue_test
+  sat
+  ; Not working - usually they hang when running
+  reagent_queue_test
+  rec_test
+  stack_test
+  stack_test_compose
+  swap_test
+  three_way
+  two_way
+  hw_queue)
  (public_names
-   reagents_counter_test
-   reagents_dining_philosophers
-   reagents_eli_stack 
-   reagents_lock_test
-   reagents_ref_channel
-   reagents_ref_test
-   reagents_swap_test2
-   reagents_queue_test 
-   reagents_sat
-
-   ; Not working - usually they hang when running
-   reagents_reagent_queue_test
-   reagents_rec_test
-   reagents_stack_test ; Flakey test, sometimes passes.
-   reagents_stack_test_compose 
-   reagents_swap_test 
-   reagents_three_way 
-   reagents_two_way
-   reagents_hw_queue)
- 
+  reagents_counter_test
+  reagents_dining_philosophers
+  reagents_eli_stack
+  reagents_lock_test
+  reagents_ref_channel
+  reagents_ref_test
+  reagents_swap_test2
+  reagents_queue_test
+  reagents_sat
+  ; Not working - usually they hang when running
+  reagents_reagent_queue_test
+  reagents_rec_test
+  reagents_stack_test ; Flakey test, sometimes passes.
+  reagents_stack_test_compose
+  reagents_swap_test
+  reagents_three_way
+  reagents_two_way
+  reagents_hw_queue)
  (libraries unix reagents)
  (flags
   (:standard -w -32))

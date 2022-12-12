@@ -15,11 +15,12 @@
  *)
 
 open Printf
-module Scheduler = Sched_ws.Make(
-  struct
-    let num_domains = 1
-    let is_affine = false
-  end)
+
+module Scheduler = Sched_ws.Make (struct
+  let num_domains = 1
+  let is_affine = false
+end)
+
 module Reagents = Reagents.Make (Scheduler)
 module R_data = Reagents.Data
 module Counter = R_data.Counter
@@ -38,11 +39,14 @@ let main () =
   printf "%d\n%!" @@ run (Counter.inc c) ();
   printf "%d\n%!" @@ run (Counter.inc c) ();
   printf "%d\n%!" @@ run (Counter.dec c) ();
-  run (Counter.try_dec c >>= (fun ov ->
-    match ov with
-    | Some 1 -> ( printf "Counter is 0. Further decrement blocks the thread!\n%!";
-                  constant () )
-    | _ -> failwith "impossible")) ();
+  run
+    ( Counter.try_dec c >>= fun ov ->
+      match ov with
+      | Some 1 ->
+          printf "Counter is 0. Further decrement blocks the thread!\n%!";
+          constant ()
+      | _ -> failwith "impossible" )
+    ();
   printf "%d\n%!" @@ run (Counter.dec c) ();
   printf "Should not see this\n";
 

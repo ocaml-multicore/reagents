@@ -15,15 +15,15 @@
  *)
 
 open Printf
-module Scheduler = Sched_ws.Make(
-  struct
-    let num_domains = 1
-    let is_affine = false
-  end)
+
+module Scheduler = Sched_ws.Make (struct
+  let num_domains = 1
+  let is_affine = false
+end)
+
 module Reagents = Reagents.Make (Scheduler)
 open Scheduler
 open Reagents
-
 module Sync = Reagents.Sync
 module Lock = Sync.Lock
 module CV = Sync.Condition_variable
@@ -38,19 +38,19 @@ let main () =
   let l = Lock.create () in
   let cv = CV.create () in
   run (Lock.acq l) ();
-  printf "[%s] Acquired lock\n" (id_str());
+  printf "[%s] Acquired lock\n" (id_str ());
   fork (fun () ->
-    printf "[%s] Starting waker thread\n" (id_str ());
-    run (Lock.acq l) ();
-    printf "[%s] Acquired lock\n" (id_str());
-    CV.signal cv;
-    printf "[%s] Signal send\n" (id_str());
-    assert (run (Lock.rel l) ());
-    printf "[%s] Released lock\n" (id_str()));
-  printf "[%s] Going to wait on condition variable\n" (id_str());
+      printf "[%s] Starting waker thread\n" (id_str ());
+      run (Lock.acq l) ();
+      printf "[%s] Acquired lock\n" (id_str ());
+      CV.signal cv;
+      printf "[%s] Signal send\n" (id_str ());
+      assert (run (Lock.rel l) ());
+      printf "[%s] Released lock\n" (id_str ()));
+  printf "[%s] Going to wait on condition variable\n" (id_str ());
   assert (CV.wait l cv);
-  printf "[%s] Woken up..\n" (id_str());
+  printf "[%s] Woken up..\n" (id_str ());
   assert (run (Lock.rel l) ());
-  printf "[%s] Released lock\n" (id_str())
+  printf "[%s] Released lock\n" (id_str ())
 
 let () = Scheduler.run main

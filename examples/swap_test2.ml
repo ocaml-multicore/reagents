@@ -15,11 +15,12 @@
  *)
 
 open Printf
-module Scheduler = Sched_ws.Make(
-  struct
-    let num_domains = 1
-    let is_affine = false
-  end)
+
+module Scheduler = Sched_ws.Make (struct
+  let num_domains = 1
+  let is_affine = false
+end)
+
 module Reagents = Reagents.Make (Scheduler)
 open Scheduler
 open Reagents
@@ -30,12 +31,9 @@ let id_str () = sprintf "%d:%d" (get_qid ()) (get_tid ())
 
 let main () =
   Printf.printf "This example blocks\n%!";
-  let (a,b) = mk_chan () in
+  let a, b = mk_chan () in
   let r = mk_ref 0 in
-  fork (fun () -> 
-    run (swap a >>> 
-         upd r (fun _ () -> Some (1, ()))) ());
-  run (swap b >>> 
-       upd r (fun _ () -> Some (2, ()))) ()
+  fork (fun () -> run (swap a >>> upd r (fun _ () -> Some (1, ()))) ());
+  run (swap b >>> upd r (fun _ () -> Some (2, ()))) ()
 
 let () = Scheduler.run main

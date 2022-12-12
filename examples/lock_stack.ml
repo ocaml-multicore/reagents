@@ -19,29 +19,28 @@ type 'a t = 'a list ref * bool Atomic.t
 let max_iters = 100000
 
 let rec lock m = function
-  | 0 -> 
-      begin
-        ignore (Unix.select [] [] [] 0.1);
-        lock m max_iters
-      end
-  | n -> 
-      if Atomic.compare_and_set m false true then ()
-      else lock m (n - 1)
+  | 0 ->
+      ignore (Unix.select [] [] [] 0.1);
+      lock m max_iters
+  | n -> if Atomic.compare_and_set m false true then () else lock m (n - 1)
 
 let lock m = lock m max_iters
-
-let rec unlock m =
-  if Atomic.compare_and_set m true false then ()
-  else unlock m
-
+let rec unlock m = if Atomic.compare_and_set m true false then () else unlock m
 let create () : 'a t = (ref [], Atomic.make false)
 
-let push (l,m) v = lock m; (l := v::!l); unlock m
-
-let pop (l,m) =
+let push (l, m) v =
   lock m;
-  let r = match !l with
-          | [] -> None
-          | x::xl -> (l := xl; Some x)
+  l := v :: !l;
+  unlock m
+
+let pop (l, m) =
+  lock m;
+  let r =
+    match !l with
+    | [] -> None
+    | x :: xl ->
+        l := xl;
+        Some x
   in
-  unlock m; r
+  unlock m;
+  r
