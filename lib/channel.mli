@@ -21,7 +21,7 @@ module type S = sig
       type ['b]. *)
 
   type ('a,'b) reagent
-  (** The type of reagent. See {!Base.t}. *)
+  (** The type of reagent. See {!Reagents.S.t}. *)
 
   val mk_chan : ?name:string -> unit -> ('a,'b) endpoint * ('b,'a) endpoint
   (** Make a new channel. Returns a pair of dual endpoints. *)

@@ -6,15 +6,14 @@ reagents is TODO
 
 reagents is distributed under the ISC license.
 
-Homepage: https://github.com/ocamllabs/reagents  
+Homepage: https://github.com/ocamllabs/reagents
 
 ## Installation
 
 reagents can be installed with `opam`. You would also need to install the multicore OCaml compiler:
 
-    $ opam remote add multicore https://github.com/ocamllabs/multicore-opam.git
-    $ opam switch 4.02.2+multicore
-    $ opam install reagents
+    $ opam switch create . 5.0.0~rc1 --repo=default,alpha=git+https://github.com/kit-ty-kate/opam-alpha-repository.git -y
+    $ ???
 
 ## Documentation
 
@@ -32,4 +31,4 @@ In the distribution sample programs and tests are located in the
 [`test`](test) directory of the distribution. They can be built and run
 with:
 
-    topkg build --tests true && topkg test 
+    dune build @runtest

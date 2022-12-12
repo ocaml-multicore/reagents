@@ -111,7 +111,7 @@ module Test (Q : QUEUE) = struct
     in
     let rec consume i =
       match Q.pop q with
-      | None -> () (* printf "consumed=%d\n%!" i *)
+      | None -> (); printf "consumed=%d\n%!" i
       | Some _ -> consume (i+1)
     in
     for i = 1 to num_doms - 1 do
@@ -127,7 +127,7 @@ module Test (Q : QUEUE) = struct
 end
 
 let main () =
-  let module M = Test(Lockfree.MSQueue) in
+  let module M = Test(Lockfree.Michael_scott_queue) in
   let (m,sd) = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
   printf "Hand-written Lockfree.MSQueue: mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m)
 
