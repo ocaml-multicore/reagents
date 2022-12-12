@@ -3,122 +3,87 @@
  (modules sched_ws)
  (libraries lockfree))
 
-
 (test
  (name counter_test)
  (modules counter_test)
- (libraries reagents sched_ws)
- (flags
-  (:standard -w -32)))
+ (libraries reagents sched_ws))
 
 (test
  (name dining_philosophers)
  (modules dining_philosophers)
- (libraries reagents sched_ws)
- (flags
-  (:standard -w -32)))
+ (libraries reagents sched_ws))
 
 (test
  (name eli_stack)
  (modules eli_stack)
- (libraries reagents sched_ws)
- (flags
-  (:standard -w -32)))
+ (libraries reagents sched_ws))
 
 (test
  (name lock_test)
  (modules lock_test)
- (libraries reagents sched_ws)
- (flags
-  (:standard -w -32)))
+ (libraries reagents sched_ws))
 
 (test
  (name ref_channel)
  (modules ref_channel)
- (libraries reagents sched_ws)
- (flags
-  (:standard -w -32)))
+ (libraries reagents sched_ws))
 
 (test
  (name ref_test)
  (modules ref_test)
- (libraries reagents sched_ws)
- (flags
-  (:standard -w -32)))
+ (libraries reagents sched_ws))
 
 (test
  (name swap_test2)
  (modules swap_test2)
- (libraries reagents sched_ws)
- (flags
-  (:standard -w -32)))
+ (libraries reagents sched_ws))
 
 (test
  (name queue_test)
  (modules queue_test lock_queue)
- (libraries reagents sched_ws )
- (flags
-  (:standard -w -32)))
+ (libraries reagents sched_ws))
 
 (test
  (name reagent_queue_test)
  (modules reagent_queue_test)
- (libraries reagents sched_ws )
- (flags
-  (:standard -w -32)))
+ (libraries reagents sched_ws))
 
 (test
  (name sat)
  (modules sat)
- (libraries reagents sched_ws )
- (flags
-  (:standard -w -32)))
+ (libraries reagents sched_ws))
 
 (test
  (name rec_test)
  (modules rec_test)
- (libraries reagents sched_ws )
- (flags
-  (:standard -w -32)))
+ (libraries reagents sched_ws))
 
 (test
  (name stack_test)
  (modules stack_test lock_stack)
- (libraries reagents sched_ws)
- (flags
-  (:standard -w -32)))
+ (libraries reagents sched_ws))
 
 (test
  (name stack_test_compose)
  (modules stack_test_compose)
- (libraries reagents sched_ws )
- (flags
-  (:standard -w -32)))
+ (libraries reagents sched_ws))
 
 (test
  (name swap_test)
  (modules swap_test)
- (libraries reagents sched_ws )
- (flags
-  (:standard -w -32)))
+ (libraries reagents sched_ws))
 
 (test
  (name three_way)
  (modules three_way)
- (libraries reagents sched_ws )
- (flags
-  (:standard -w -32)))
+ (libraries reagents sched_ws))
 
 (test
  (name two_way)
  (modules two_way)
- (libraries reagents sched_ws )
- (flags
-  (:standard -w -32)))
+ (libraries reagents sched_ws))
 
 (test
  (name hw_queue)
  (modules hw_queue)
- (libraries reagents sched_ws )
- (flags
-  (:standard -w -32)))
+ (libraries reagents sched_ws))

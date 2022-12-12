@@ -25,12 +25,6 @@ end
 
 module S = Sched_ws.Make (M)
 
-module type BARRIER = sig
-  type t
-
-  val create : int -> t
-  val finish : t -> unit
-end
 
 module Reagents = Reagents.Make (S)
 open Reagents

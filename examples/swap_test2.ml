@@ -14,7 +14,6 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-open Printf
 
 module Scheduler = Sched_ws.Make (struct
   let num_domains = 1
@@ -26,8 +25,6 @@ open Scheduler
 open Reagents
 open Reagents.Channel
 open Reagents.Ref
-
-let id_str () = sprintf "%d:%d" (get_qid ()) (get_tid ())
 
 let main () =
   Printf.printf "This example blocks\n%!";

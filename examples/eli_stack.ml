@@ -115,7 +115,6 @@ end
 
 module Data = Reagents.Data
 
-let num_runs = 10
 
 let main () =
   let module M = Test (MakeS (Data.Elimination_stack)) in

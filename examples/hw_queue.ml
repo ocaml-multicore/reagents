@@ -14,11 +14,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-let print_usage_and_exit () =
-  print_endline @@ "Usage: " ^ Sys.argv.(0) ^ " <num_domains> <num_items>";
-  exit 0
 
-let num_doms, num_items = 2, 10_000
+let num_doms = 2
+let num_items = 10_000
 let items_per_dom = num_items / num_doms
 
 module M = struct
@@ -27,15 +25,6 @@ module M = struct
 end
 
 module S = Sched_ws.Make (M)
-
-let id_str () = Printf.sprintf "%d:%d" (S.get_qid ()) (S.get_tid ())
-
-module type BARRIER = sig
-  type t
-
-  val create : int -> t
-  val finish : t -> unit
-end
 
 module Reagents = Reagents.Make (S)
 open Reagents
