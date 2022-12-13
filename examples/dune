@@ -1,7 +1,7 @@
 (library
  (name sched_ws)
  (modules sched_ws)
- (libraries lockfree))
+ (libraries lockfree unix))
 
 (test
  (name counter_test)
