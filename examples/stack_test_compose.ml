@@ -16,7 +16,6 @@
  *)
 
 let num_items = 10_000
-
 let items_per_dom = num_items / 2
 let () = Printf.printf "items_per_domain = %d\n%!" @@ items_per_dom
 

@@ -26,7 +26,6 @@ module Ref_channel (Reagents : Reagents.S) :
         match st with None -> None | Some v -> Some (None, v))
 end
 
-
 module Scheduler = Sched_ws.Make (struct
   let num_domains = 1
   let is_affine = false
@@ -37,7 +36,6 @@ open Scheduler
 open Reagents
 module Channel = Ref_channel (Reagents)
 open Channel
-
 
 let main () =
   let c = mk_chan () in

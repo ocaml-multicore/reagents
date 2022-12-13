@@ -15,8 +15,7 @@
  *)
 
 let num_doms = 2
-let num_items = 100_000 
-
+let num_items = 100_000
 let items_per_dom = num_items / num_doms
 let () = Printf.printf "items_per_domain = %d\n%!" items_per_dom
 
@@ -114,7 +113,6 @@ module Test (Q : STACK) = struct
 end
 
 module Data = Reagents.Data
-
 
 let main () =
   let module M = Test (MakeS (Data.Elimination_stack)) in

@@ -197,5 +197,4 @@ end) : S = struct
         Atomic.set running true)
     |> ignore;
     Unix.sleepf 0.5
-
 end

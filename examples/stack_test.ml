@@ -15,11 +15,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-
-
 let num_doms = 2
-
-let num_items = 10_000 
+let num_items = 10_000
 
 let () =
   if num_doms mod 2 <> 0 then (

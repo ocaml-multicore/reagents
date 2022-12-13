@@ -15,7 +15,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-let num_philosophers = 3 
+let num_philosophers = 3
 let num_rounds = 10_000
 
 module S = Sched_ws.Make (struct

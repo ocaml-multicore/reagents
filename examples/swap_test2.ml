@@ -14,7 +14,6 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-
 module Scheduler = Sched_ws.Make (struct
   let num_domains = 1
   let is_affine = false

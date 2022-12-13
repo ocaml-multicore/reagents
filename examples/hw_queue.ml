@@ -14,7 +14,6 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-
 let num_doms = 2
 let num_items = 10_000
 let items_per_dom = num_items / num_doms
@@ -25,7 +24,6 @@ module M = struct
 end
 
 module S = Sched_ws.Make (M)
-
 module Reagents = Reagents.Make (S)
 open Reagents
 open Printf
