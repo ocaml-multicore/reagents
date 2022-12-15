@@ -120,4 +120,4 @@ let main () =
   printf "Elimination stack: mean = %f, sd = %f tp=%f\n%!" m sd
     (float_of_int num_items /. m)
 
-let () = S.run_allow_deadlock main
+let () = S.run_with_timeout main

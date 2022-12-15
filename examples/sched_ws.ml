@@ -85,6 +85,14 @@ end) : S = struct
   let fresh_tid () = Oo.id (object end)
   let enqueue c qid = Lockfree.Michael_scott_queue.push (get_queue qid) c
 
+  module Deadlock_detection = struct
+    let status = Atomic.make 0
+
+    let enable () = Atomic.decr status 
+    let disable () = Atomic.incr status
+
+    let is_on () = Atomic.get status == 0
+  end
   let dequeue qid =
     let b = Lockfree.Backoff.create () in
     let queue = get_queue qid in
@@ -95,8 +103,10 @@ end) : S = struct
 
           k ()
       | None ->
-          if S.num_domains == Atomic.get num_idling_domains then
-            raise All_domains_idle;
+          if
+            S.num_domains == Atomic.get num_idling_domains
+            && Deadlock_detection.is_on ()
+          then raise All_domains_idle;
 
           if Atomic.get num_threads > 0 then (
             if not idling then Atomic.incr num_idling_domains;
@@ -151,11 +161,24 @@ end) : S = struct
             | ForkOn (f, qid) ->
                 Some
                   (fun (k : (a, _) continuation) ->
+                    Deadlock_detection.disable ();
+
                     if S.is_affine then (
-                      enqueue (fun () -> spawn f (fresh_tid ())) qid;
+                      enqueue
+                        (fun () ->
+                          spawn
+                            (fun () ->
+                              Deadlock_detection.enable ();
+                              f ())
+                            (fresh_tid ()))
+                        qid;
                       continue k ())
                     else (
-                      enqueue (continue k) qid;
+                      enqueue
+                        (fun () ->
+                          Deadlock_detection.enable ();
+                          continue k ())
+                        qid;
                       spawn f (fresh_tid ())))
             | Yield ->
                 Some
