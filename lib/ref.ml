@@ -68,14 +68,16 @@ module Make (Sched : Scheduler.S) :
   let read_imm r = Kcas.get r.data
 
   let wake_all q =
-    let rec loop () =
+    let rec drain_offers offers =
       match Lockfree.Michael_scott_queue.pop q with
-      | None -> ()
-      | Some (Offer ov) ->
-          ignore (Offer.rescind ov);
-          loop ()
+      | None -> offers
+      | Some offer -> drain_offers (offer :: offers)
     in
-    loop ()
+    let offers = drain_offers [] in
+    List.iter
+      (fun (Offer offer) ->
+        assert (Option.is_none (Offer.rescind offer)))
+      offers
 
   let cas_imm r expect update = Kcas.cas r.data expect update
 

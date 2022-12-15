@@ -21,6 +21,7 @@ let items_per_dom = num_items / num_doms
 module M = struct
   let num_domains = num_doms
   let is_affine = false
+  let work_stealing = false
 end
 
 module S = Sched_ws.Make (M)

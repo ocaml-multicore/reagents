@@ -36,6 +36,7 @@ end
 module Make (S : sig
   val num_domains : int
   val is_affine : bool
+  val work_stealing : bool
 end) : S = struct
   open Effect
   open Effect.Deep
@@ -94,8 +95,13 @@ end) : S = struct
 
   let dequeue qid =
     let b = Lockfree.Backoff.create () in
-    let queue = get_queue qid in
     let rec loop ~idling =
+      let queue =
+        let qid =
+          if idling && S.work_stealing then Random.int S.num_domains else qid
+        in
+        get_queue qid
+      in
       match Lockfree.Michael_scott_queue.pop queue with
       | Some k ->
           if idling then Atomic.decr num_idling_domains;
@@ -105,6 +111,7 @@ end) : S = struct
           if
             S.num_domains == Atomic.get num_idling_domains
             && Deadlock_detection.is_on ()
+            && not S.work_stealing
           then raise All_domains_idle;
 
           if Atomic.get num_threads > 0 then (

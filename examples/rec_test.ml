@@ -1,6 +1,8 @@
 module Scheduler = Sched_ws.Make (struct
   let num_domains = 4
   let is_affine = false
+
+  let work_stealing = true
 end)
 
 module Reagents = Reagents.Make (Scheduler)
