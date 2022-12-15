@@ -87,12 +87,11 @@ end) : S = struct
 
   module Deadlock_detection = struct
     let status = Atomic.make 0
-
-    let enable () = Atomic.decr status 
+    let enable () = Atomic.decr status
     let disable () = Atomic.incr status
-
     let is_on () = Atomic.get status == 0
   end
+
   let dequeue qid =
     let b = Lockfree.Backoff.create () in
     let queue = get_queue qid in
