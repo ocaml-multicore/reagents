@@ -9,6 +9,11 @@
  (libraries reagents sched_ws))
 
 (test
+ (name counter_test_blocking)
+ (modules counter_test_blocking)
+ (libraries reagents sched_ws))
+
+(test
  (name dining_philosophers)
  (modules dining_philosophers)
  (libraries reagents sched_ws))

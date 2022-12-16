@@ -33,6 +33,7 @@ module type S = sig
   val run_with_timeout : (unit -> unit) -> unit
 end
 
+exception All_domains_idle
 module Make (S : sig
   val num_domains : int
   val is_affine : bool
@@ -49,8 +50,6 @@ end) : S = struct
   type _ Effect.t += ForkOn : (unit -> unit) * queue_id -> unit Effect.t
   type _ Effect.t += Yield : unit Effect.t
   type _ Effect.t += GetTid : thread_id Effect.t
-
-  exception All_domains_idle
 
   let suspend f = perform (Suspend f)
   let resume t v = perform (Resume (t, v))
