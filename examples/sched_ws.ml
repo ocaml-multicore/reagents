@@ -167,6 +167,7 @@ end) : S = struct
             | ForkOn (f, qid) ->
                 Some
                   (fun (k : (a, _) continuation) ->
+                    assert (0 <= qid && qid < S.num_domains);
                     Deadlock_detection.disable ();
 
                     if S.is_affine then (
