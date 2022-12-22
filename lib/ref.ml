@@ -22,9 +22,14 @@ module type S = sig
   val mk_ref : 'a -> 'a ref
   val read : 'a ref -> (unit, 'a) reagent
   val read_imm : 'a ref -> 'a
-  val cas : 'a ref -> 'a -> 'a -> (unit, unit) reagent
+  val cas : ?never_block:bool -> 'a ref -> 'a -> 'a -> (unit, unit) reagent
   val cas_imm : 'a ref -> 'a -> 'a -> bool
-  val upd : 'a ref -> ('a -> 'b -> ('a * 'c) option) -> ('b, 'c) reagent
+
+  val upd :
+    ?never_block:bool ->
+    'a ref ->
+    ('a -> 'b -> ('a * 'c) option) ->
+    ('b, 'c) reagent
 end
 
 module Make (Sched : Scheduler.S) :
@@ -82,16 +87,18 @@ module Make (Sched : Scheduler.S) :
 
   let rec upd :
             'a 'b 'c 'r.
+            never_block:bool ->
             'a ref ->
             ('a -> 'b -> ('a * 'c) option) ->
             ('c, 'r) reagent ->
             ('b, 'r) reagent =
-   fun ref f next_reagent ->
+   fun ~never_block ref f next_reagent ->
+    let on_failure = if never_block then Core.Retry else Core.Block in
     let try_react arg reaction offer =
       if can_cas_immediate next_reagent reaction offer then
         let old_value = Kcas.get ref.data in
         match f old_value arg with
-        | None -> Block
+        | None -> on_failure
         | Some (new_value, c) ->
             if Kcas.cas ref.data old_value new_value then (
               wake_all ref.offers;
@@ -101,26 +108,30 @@ module Make (Sched : Scheduler.S) :
         let () =
           match offer with
           | None -> ()
-          | Some offer -> Lockfree.Michael_scott_queue.push ref.offers (Offer offer)
+          | Some offer ->
+              Lockfree.Michael_scott_queue.push ref.offers (Offer offer)
         in
         let old_value = Kcas.get ref.data in
         match f old_value arg with
-        | None -> Block
+        | None -> on_failure
         | Some (new_value, return_value) ->
             let cas =
-              PostCommitCas.cas ref.data old_value new_value (fun () -> wake_all ref.offers)
+              PostCommitCas.cas ref.data old_value new_value (fun () ->
+                  wake_all ref.offers)
             in
-            next_reagent.try_react return_value (Reaction.with_CAS reaction cas) offer
+            next_reagent.try_react return_value
+              (Reaction.with_CAS reaction cas)
+              offer
     in
     {
       always_commits = false;
-      compose = (fun next -> upd ref f (next_reagent.compose next));
+      compose = (fun next -> upd ~never_block ref f (next_reagent.compose next));
       try_react;
     }
 
-  let upd r f = upd r f Core.commit
+  let upd ?(never_block = false) r f = upd ~never_block r f Core.commit
 
-  let cas r expect update =
-    upd r (fun current () ->
+  let cas ?(never_block = false) r expect update =
+    upd ~never_block r (fun current () ->
         if current = expect then Some (update, ()) else None)
 end

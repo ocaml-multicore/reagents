@@ -116,7 +116,8 @@ let main () =
 
   let module M = Test (Lockfree.Michael_scott_queue) in
   let m, sd = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
-  Printf.printf "Hand-written Lockfree.MSQueue: mean = %f, sd = %f tp=%f\n%!" m sd
+  Printf.printf "Hand-written Lockfree.MSQueue: mean = %f, sd = %f tp=%f\n%!" m
+    sd
     (float_of_int num_items /. m)
 
 let () = S.run main
