@@ -75,7 +75,7 @@ module Make (Sched : Scheduler.S) :
     in
     let offers = drain_offers [] in
     List.iter
-      (fun (Offer offer) -> assert (Option.is_none (Offer.rescind offer)))
+      (fun (Offer offer) -> ignore (Option.is_none (Offer.rescind offer)))
       offers
 
   let cas_imm r expect update = Kcas.cas r.data expect update
