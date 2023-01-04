@@ -21,7 +21,7 @@ let num_rounds = 10_000
 module S = Sched_ws.Make (struct
   let num_domains = num_philosophers
   let is_affine = true
-  let work_stealing = false
+  let work_stealing = true
 end)
 
 module Reagents = Reagents.Make (S)
@@ -68,4 +68,4 @@ let main () =
   run (CDL.await b) ();
   exit 0
 
-let _ = S.run_allow_deadlock main
+let () = S.run main

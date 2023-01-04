@@ -113,4 +113,4 @@ let main () =
   printf "Reagent Lockfree.MSQueue: mean = %f, sd = %f tp=%f\n%!" m sd
     (float_of_int num_items /. m)
 
-let () = S.run_allow_deadlock main
+let () = S.run main
