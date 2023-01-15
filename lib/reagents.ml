@@ -35,8 +35,11 @@ module type S = sig
   val ( >>> ) : ('a, 'b) t -> ('b, 'c) t -> ('a, 'c) t
   val ( <+> ) : ('a, 'b) t -> ('a, 'b) t -> ('a, 'b) t
   val ( <*> ) : ('a, 'b) t -> ('a, 'c) t -> ('a, 'b * 'c) t
+  val ( <**> ) : ('a, 'b) t -> ('a, 'c) t -> ('a, 'b * 'c) t
   val attempt : ('a, 'b) t -> ('a, 'b option) t
   val run : ('a, 'b) t -> 'a -> 'b
+
+  val change_commit :  ('a, 'b) t ->  ('a, 'b) t 
 
   module Ref : Ref.S with type ('a, 'b) reagent = ('a, 'b) t
   module Channel : Channel.S with type ('a, 'b) reagent = ('a, 'b) t

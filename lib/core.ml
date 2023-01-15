@@ -36,10 +36,12 @@ module type S = sig
   val ( >>> ) : ('a, 'b) t -> ('b, 'c) t -> ('a, 'c) t
   val ( <+> ) : ('a, 'b) t -> ('a, 'b) t -> ('a, 'b) t
   val ( <*> ) : ('a, 'b) t -> ('a, 'c) t -> ('a, 'b * 'c) t
+  val ( <**> ) : ('a, 'b) t -> ('a, 'c) t -> ('a, 'b * 'c) t
   val attempt : ('a, 'b) t -> ('a, 'b option) t
   val run : ('a, 'b) t -> 'a -> 'b
   val commit : ('a, 'a) t
   val can_cas_immediate : ('a, 'b) t -> reaction -> 'c offer option -> bool
+  val change_commit : ('a, 'b) t -> ('a, 'b) t
 end
 
 module Make (Sched : Scheduler.S) :
@@ -69,7 +71,9 @@ module Make (Sched : Scheduler.S) :
     }
 
   let commit : ('a, 'a) t =
-    let try_react a rx = function
+    let try_react a rx offer =
+      Printf.printf "commit\n%!";
+      match offer with
       | None ->
           (* No offer *)
           if Reaction.try_commit rx then Done a else Retry
@@ -81,6 +85,24 @@ module Make (Sched : Scheduler.S) :
           | Some a' -> Done a')
     in
     { always_commits = true; compose = (fun next -> next); try_react }
+
+  let commit2 : ('a, 'a) t =
+    let try_react a rx offer =
+      Printf.printf "commit2\n%!";
+      match offer with
+      | None ->
+          (* No offer *)
+          if Reaction.try_commit rx then Done a else Retry
+      | Some offer -> (
+          match Offer.rescind offer with
+          | None ->
+              (* Offer rescinded successfully *)
+              if Reaction.try_commit rx then Done a else Retry
+          | Some a' -> Done a')
+    in
+    { always_commits = true; compose = (fun next -> next); try_react }
+
+  let change_commit r1 = r1.compose commit2
 
   type ('a, 'b) mkr_info = {
     ret_val : 'a -> 'b result;
@@ -185,6 +207,45 @@ module Make (Sched : Scheduler.S) :
 
   let ( <*> ) (r1 : ('a, 'b) t) (r2 : ('a, 'c) t) : ('a, 'b * 'c) t =
     lift (fun a -> (a, a)) >>> first r1 >>> second r2
+
+  let commit_hijack : reaction option ref -> ('a, 'a) t =
+   fun reaction_ref ->
+    let try_react (arg : 'a) (reaction : reaction) _offer =
+      reaction_ref := Some reaction;
+      Done arg
+    in
+    { always_commits = false; compose = (fun _ -> assert false); try_react }
+
+
+  let ( <**> ) (r1 : ('a, 'b) t) (r2 : ('a, 'c) t) : ('a, 'b * 'c) t =
+    (* override the commit on the first one to ensure it cannot actually commit - it has to return the reaction in progress
+
+       call 1st
+       a) if 1st finishes, call 2nd with the same reaction
+       b) if 1st wants to retry, keep retrying
+       c) if 1st blocks, try 2nd from scratch
+    *)
+    let r1_reaction = ref None in
+    let r1 = r1 >>> commit_hijack r1_reaction in
+    let rec try_react arg reaction _ =
+      match r1.try_react arg reaction None with
+      | Retry | BlockAndRetry -> try_react arg reaction None
+      | Block -> assert false
+      | Done return_value -> (
+          let reaction = Option.get !r1_reaction in
+
+          let r2_reaction = ref None in
+          let r2 = r2 >>> commit_hijack r2_reaction in
+
+          match r2.try_react arg reaction None with
+          | Retry | BlockAndRetry -> try_react arg reaction None
+          | Block -> assert false
+          | Done return_value2 ->
+              let reaction = Option.get !r2_reaction in
+
+              commit.try_react (return_value, return_value2) reaction None)
+    in
+    { always_commits = false; compose = (fun _ -> assert false); try_react }
 
   let rec with_offer pause r v =
     let offer = Offer.make () in

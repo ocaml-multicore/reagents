@@ -73,6 +73,8 @@ module type S = sig
   val ( <*> ) : ('a, 'b) t -> ('a, 'c) t -> ('a, 'b * 'c) t
   (** Parallel composition operator. [a <*> b] is only enabled if both [a] and
       [b] are enabled. *)
+  
+  val ( <**> ) : ('a, 'b) t -> ('a, 'c) t -> ('a, 'b * 'c) t
 
   val attempt : ('a, 'b) t -> ('a, 'b option) t
   (** Convert a blocking reagent into a non-blocking one. If reagent [r] is a
@@ -82,6 +84,8 @@ module type S = sig
   val run : ('a, 'b) t -> 'a -> 'b
   (** [run r v] runs the reagents [r] with value [v]. *)
 
+  val change_commit :  ('a, 'b) t ->  ('a, 'b) t 
+  
   module Ref : Ref.S with type ('a, 'b) reagent = ('a, 'b) t
   (** Shared memory references. *)
 

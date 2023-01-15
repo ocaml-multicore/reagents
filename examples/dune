@@ -8,6 +8,12 @@
  (modules counter_test)
  (libraries reagents sched_ws))
 
+
+(test
+ (name change_commit)
+ (modules change_commit)
+ (libraries reagents sched_ws))
+
 (test
  (name dining_philosophers)
  (modules dining_philosophers)
