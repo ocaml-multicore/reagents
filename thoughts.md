@@ -17,3 +17,6 @@ It's not as simple as the <+>, since we have to ensure we don't commit just one 
 # README
 
 Describe the benefits, show examples and core benchmarks 
+
+
+passing variable with destruction

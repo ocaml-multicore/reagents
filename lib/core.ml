@@ -72,7 +72,6 @@ module Make (Sched : Scheduler.S) :
 
   let commit : ('a, 'a) t =
     let try_react a rx offer =
-      Printf.printf "commit\n%!";
       match offer with
       | None ->
           (* No offer *)
@@ -88,7 +87,6 @@ module Make (Sched : Scheduler.S) :
 
   let commit2 : ('a, 'a) t =
     let try_react a rx offer =
-      Printf.printf "commit2\n%!";
       match offer with
       | None ->
           (* No offer *)
@@ -214,8 +212,14 @@ module Make (Sched : Scheduler.S) :
       reaction_ref := Some reaction;
       Done arg
     in
-    { always_commits = false; compose = (fun _ -> assert false); try_react }
-
+    {
+      always_commits = false;
+      compose =
+        (fun _ ->
+          (* this hijack should never need to be removed; caller handles everything *)
+          assert false);
+      try_react;
+    }
 
   let ( <**> ) (r1 : ('a, 'b) t) (r2 : ('a, 'c) t) : ('a, 'b * 'c) t =
     (* override the commit on the first one to ensure it cannot actually commit - it has to return the reaction in progress
@@ -225,27 +229,45 @@ module Make (Sched : Scheduler.S) :
        b) if 1st wants to retry, keep retrying
        c) if 1st blocks, try 2nd from scratch
     *)
-    let r1_reaction = ref None in
-    let r1 = r1 >>> commit_hijack r1_reaction in
-    let rec try_react arg reaction _ =
-      match r1.try_react arg reaction None with
-      | Retry | BlockAndRetry -> try_react arg reaction None
-      | Block -> assert false
-      | Done return_value -> (
-          let reaction = Option.get !r1_reaction in
-
-          let r2_reaction = ref None in
-          let r2 = r2 >>> commit_hijack r2_reaction in
-
-          match r2.try_react arg reaction None with
-          | Retry | BlockAndRetry -> try_react arg reaction None
-          | Block -> assert false
-          | Done return_value2 ->
-              let reaction = Option.get !r2_reaction in
-
-              commit.try_react (return_value, return_value2) reaction None)
+    let try_react arg reaction caller_offer (* decide what to do with it *) =
+      let rec run user_reagent =
+        let current_offer = Option.map (fun _ -> Offer.make ()) caller_offer in
+        let hijacked_reaction = ref None in
+        let reagent = user_reagent >>> commit_hijack hijacked_reaction in
+        match reagent.try_react arg Reaction.empty current_offer with
+        | Retry ->
+            (* TODO: we should probably just forward it back; also handling retry *)
+            run user_reagent
+        | Block | BlockAndRetry ->
+            assert (Option.is_none !hijacked_reaction);
+            `Block current_offer
+        | Done returned ->
+            `Uncommited_done (returned, Option.get !hijacked_reaction)
+      in
+      let r1_result = run r1 in
+      let r2_result = run r2 in
+      match (r1_result, r2_result) with
+      | ( `Uncommited_done (returned_1, reaction_1),
+          `Uncommited_done (returned_2, reaction_2) ) ->
+          let final_reaction =
+            Reaction.(union reaction_1 reaction_2 |> union reaction)
+          in
+          (* TODO: allow composition with arbitrary reagent, including fwd offer *)
+          commit.try_react (returned_1, returned_2) final_reaction caller_offer
+      | `Block None, `Uncommited_done _ | `Uncommited_done _, `Block None ->
+          (* forward it to the caller, so we try with an offer *)
+          Block
+      | `Block (Some offer), `Uncommited_done (returned, reaction) ->
+          assert false
+      | `Uncommited_done (returned, reaction), `Block (Some offer) ->
+          assert false
+      | `Block _, `Block _ -> assert false
     in
-    { always_commits = false; compose = (fun _ -> assert false); try_react }
+    {
+      always_commits = false;
+      compose = (fun _ -> (* TODO *) assert false);
+      try_react;
+    }
 
   let rec with_offer pause r v =
     let offer = Offer.make () in

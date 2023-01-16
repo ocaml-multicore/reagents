@@ -26,6 +26,7 @@ module type S = sig
   val complete : 'a t -> 'a -> PostCommitCas.t
   val rescind : 'a t -> 'a option
   val get_result : 'a t -> 'a option
+  val override : 'a t -> 'a t -> unit
 end
 
 module Make (Sched : Scheduler.S) : S

@@ -26,6 +26,8 @@ module type S = sig
   val complete : 'a t -> 'a -> PostCommitCas.t
   val rescind : 'a t -> 'a option
   val get_result : 'a t -> 'a option
+
+  val override : 'a t -> 'a t -> unit
 end
 
 module Make (Sched : Scheduler.S) : S = struct
@@ -35,21 +37,21 @@ module Make (Sched : Scheduler.S) : S = struct
     | Rescinded
     | Completed of 'a
 
-  type 'a t = 'a status Kcas.ref
+  type 'a t = 'a status Kcas.ref ref
 
-  let make () = Kcas.ref Empty
-  let get_id r = Kcas.get_id r
+  let make () = ref (Kcas.ref Empty)
+  let get_id r = Kcas.get_id !r
   let equal o1 o2 = get_id o1 = get_id o2
 
   let is_active o =
-    match Kcas.get o with
+    match Kcas.get !o with
     | Empty | Waiting _ -> true
     | Rescinded | Completed _ -> false
 
   let wait r =
     Sched.suspend (fun k ->
         let cas_result =
-          Kcas.map r (fun v ->
+          Kcas.map !r (fun v ->
               match v with
               | Empty -> Some (Waiting k)
               | Waiting _ -> failwith "Offer.wait(1)"
@@ -66,17 +68,17 @@ module Make (Sched : Scheduler.S) : S = struct
         | Kcas.Failed -> failwith "Offer.wait(2)")
 
   let complete r new_v =
-    let old_v = Kcas.get r in
+    let old_v = Kcas.get !r in
     match old_v with
     | Waiting k ->
-        PostCommitCas.cas r old_v (Completed new_v) (fun () ->
+        PostCommitCas.cas !r old_v (Completed new_v) (fun () ->
             Sched.resume k ())
-    | Empty -> PostCommitCas.cas r old_v (Completed new_v) (fun () -> ())
+    | Empty -> PostCommitCas.cas !r old_v (Completed new_v) (fun () -> ())
     | Rescinded | Completed _ -> PostCommitCas.return false (fun () -> ())
 
   let rescind r =
     let cas_result =
-      Kcas.map r (fun v ->
+      Kcas.map !r (fun v ->
           match v with
           | Empty | Waiting _ -> Some Rescinded
           | Rescinded | Completed _ -> None)
@@ -84,10 +86,12 @@ module Make (Sched : Scheduler.S) : S = struct
     (match cas_result with
     | Kcas.Success (Waiting t) -> Sched.resume t ()
     | _ -> ());
-    match Kcas.get r with
+    match Kcas.get !r with
     | Rescinded -> None
     | Completed v -> Some v
     | _ -> failwith "Offer.rescind"
 
-  let get_result r = match Kcas.get r with Completed v -> Some v | _ -> None
+  let get_result r = match Kcas.get !r with Completed v -> Some v | _ -> None
+
+  let override r v = r := !v;
 end
