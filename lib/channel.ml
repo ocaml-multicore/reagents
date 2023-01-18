@@ -96,7 +96,7 @@ module Make (Sched : Scheduler.S) :
             in
             if
               (not (Offer.is_active sender_offer))
-              || Reaction.has_offer rx sender_offer
+              || Reaction.has_offer rx (Offer.get_id sender_offer)
               || same_offer sender_offer offer
             then
               (*                   let _ = Printf.printf "me!!\n" in *)
@@ -104,7 +104,7 @@ module Make (Sched : Scheduler.S) :
             else
               (* Found matching offer *)
               (*                 let _ = Printf.printf "found matching offer!\n" in *)
-              let new_rx = Reaction.with_offer rx sender_offer in
+              let new_rx = Reaction.with_offer rx (Offer.get_id sender_offer) in
               let merged = exchange.compose k in
               match merged.try_react a new_rx offer with
               | Retry -> try_from cursor true

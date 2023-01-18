@@ -16,50 +16,38 @@
 
 module type S = sig
   type t
-  type 'a offer
 
   val empty : t
   val with_CAS : t -> PostCommitCas.t -> t
-  val with_offer : t -> 'a offer -> t
+  val with_offer : t -> Offer_id.t -> t
   val try_commit : t -> bool
   val cas_count : t -> int
-  val has_offer : t -> 'a offer -> bool
+  val has_offer : t -> Offer_id.t -> bool
   val union : t -> t -> t
   val with_post_commit : t -> (unit -> unit) -> t
 end
 
-module Make (Sched : Scheduler.S) :
-  S with type 'a offer = 'a Offer.Make(Sched).t = struct
-  module Offer = Offer.Make (Sched)
-
-  type 'a offer = 'a Offer.t
-
-  module IntSet = Set.Make (struct
-    type t = int
-
-    let compare = compare
-  end)
-
+module Make (Sched : Scheduler.S) : S = struct
   type t = {
     cases : PostCommitCas.t list;
-    offers : IntSet.t;
+    offers : Offer_id.Set.t;
     post_commits : (unit -> unit) list;
   }
 
-  let empty = { cases = []; offers = IntSet.empty; post_commits = [] }
-  let has_offer { offers; _ } offer = IntSet.mem (Offer.get_id offer) offers
+  let empty = { cases = []; offers = Offer_id.Set.empty; post_commits = [] }
+  let has_offer { offers; _ } offer_id = Offer_id.Set.mem offer_id offers
   let with_CAS r cas = { r with cases = cas :: r.cases }
   let with_post_commit r pc = { r with post_commits = pc :: r.post_commits }
 
-  let with_offer r offer =
-    { r with offers = IntSet.add (Offer.get_id offer) r.offers }
+  let with_offer r offer_id =
+    { r with offers = Offer_id.Set.add offer_id r.offers }
 
   let cas_count r = List.length r.cases
 
   let union r1 r2 =
     {
       cases = r1.cases @ r2.cases;
-      offers = IntSet.union r1.offers r2.offers;
+      offers = Offer_id.Set.union r1.offers r2.offers;
       post_commits = r1.post_commits @ r2.post_commits;
     }
 

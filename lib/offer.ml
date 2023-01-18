@@ -21,7 +21,7 @@ module type S = sig
   val make : unit -> 'a t
   val equal : 'a t -> 'b t -> bool
   val is_active : 'a t -> bool
-  val get_id : 'a t -> int
+  val get_id : 'a t -> Offer_id.t
   val wait : 'a t -> unit
   val complete : 'a t -> 'a -> PostCommitCas.t
   val rescind : 'a t -> 'a option
@@ -38,8 +38,8 @@ module Make (Sched : Scheduler.S) : S = struct
   type 'a t = 'a status Kcas.ref
 
   let make () = Kcas.ref Empty
-  let get_id r = Kcas.get_id r
-  let equal o1 o2 = get_id o1 = get_id o2
+  let get_id r = Offer_id.make (Kcas.get_id r)
+  let equal o1 o2 = Kcas.get_id o1 = Kcas.get_id o2
 
   let is_active o =
     match Kcas.get o with
