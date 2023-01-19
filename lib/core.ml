@@ -18,6 +18,7 @@
 module type S = sig
   type reaction
   type 'a offer
+  type catalyst
   type 'a result = BlockAndRetry | Block | Retry | Done of 'a
 
   type ('a, 'b) t = {
@@ -38,6 +39,7 @@ module type S = sig
   val ( <*> ) : ('a, 'b) t -> ('a, 'c) t -> ('a, 'b * 'c) t
   val attempt : ('a, 'b) t -> ('a, 'b option) t
   val run : ('a, 'b) t -> 'a -> 'b
+  val catalyse : ('a, 'b) t -> 'a -> catalyst
   val commit : ('a, 'a) t
   val can_cas_immediate : ('a, 'b) t -> reaction -> 'c offer option -> bool
 end
@@ -51,6 +53,7 @@ module Make (Sched : Scheduler.S) :
 
   type reaction = Reaction.t
   type 'a offer = 'a Offer.t
+  type catalyst = Offer.catalyst
   type 'a result = BlockAndRetry | Block | Retry | Done of 'a
 
   type ('a, 'b) t = {
@@ -186,8 +189,10 @@ module Make (Sched : Scheduler.S) :
   let ( <*> ) (r1 : ('a, 'b) t) (r2 : ('a, 'c) t) : ('a, 'b * 'c) t =
     lift (fun a -> (a, a)) >>> first r1 >>> second r2
 
-  let rec with_offer pause r v =
-    let offer = Offer.make () in
+  let rec with_offer ?offer pause r v =
+    let offer =
+      match offer with None -> Offer.make () | Some offer -> offer
+    in
     match r.try_react v Reaction.empty (Some offer) with
     | Done res -> res
     | f -> (
@@ -211,6 +216,12 @@ module Make (Sched : Scheduler.S) :
     let b = Lockfree.Backoff.create () in
     let pause () = Lockfree.Backoff.once b in
     without_offer pause r v
+
+  let catalyse r v =
+    let offer, catalyst = Offer.make_catalyst () in
+    match r.try_react v Reaction.empty (Some offer) with
+    | Done _ | Retry -> assert false
+    | Block | BlockAndRetry -> catalyst
 
   let can_cas_immediate k rx = function
     | Some _ -> false

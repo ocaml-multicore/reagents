@@ -26,12 +26,17 @@ module type S = sig
   val complete : 'a t -> 'a -> PostCommitCas.t
   val rescind : 'a t -> 'a option
   val get_result : 'a t -> 'a option
+
+  type catalyst
+  val make_catalyst : unit -> 'a t * catalyst
+  val cancel_catalyst : catalyst -> unit
 end
 
 module Make (Sched : Scheduler.S) : S = struct
   type 'a status =
     | Empty
     | Waiting of unit Sched.cont
+    | Catalyst
     | Rescinded
     | Completed of 'a
 
@@ -43,7 +48,7 @@ module Make (Sched : Scheduler.S) : S = struct
 
   let is_active o =
     match Kcas.get o with
-    | Empty | Waiting _ -> true
+    | Empty | Waiting _ | Catalyst -> true
     | Rescinded | Completed _ -> false
 
   let wait r =
@@ -52,7 +57,7 @@ module Make (Sched : Scheduler.S) : S = struct
           Kcas.map r (fun v ->
               match v with
               | Empty -> Some (Waiting k)
-              | Waiting _ -> failwith "Offer.wait(1)"
+              | Waiting _ | Catalyst -> failwith "Offer.wait(1)"
               | Completed _ | Rescinded -> None)
         in
         match cas_result with
@@ -71,6 +76,7 @@ module Make (Sched : Scheduler.S) : S = struct
     | Waiting k ->
         PostCommitCas.cas r old_v (Completed new_v) (fun () ->
             Sched.resume k ())
+    | Catalyst -> PostCommitCas.return true (fun () -> ())
     | Empty -> PostCommitCas.cas r old_v (Completed new_v) (fun () -> ())
     | Rescinded | Completed _ -> PostCommitCas.return false (fun () -> ())
 
@@ -79,15 +85,24 @@ module Make (Sched : Scheduler.S) : S = struct
       Kcas.map r (fun v ->
           match v with
           | Empty | Waiting _ -> Some Rescinded
-          | Rescinded | Completed _ -> None)
+          | Rescinded | Completed _ | Catalyst -> None)
     in
     (match cas_result with
     | Kcas.Success (Waiting t) -> Sched.resume t ()
     | _ -> ());
     match Kcas.get r with
-    | Rescinded -> None
+    | Rescinded | Catalyst -> None
     | Completed v -> Some v
     | _ -> failwith "Offer.rescind"
 
   let get_result r = match Kcas.get r with Completed v -> Some v | _ -> None
+
+  type catalyst = unit -> unit
+
+  let make_catalyst () =
+    let offer = Kcas.ref Catalyst in
+    let cancel () = Kcas.set offer Rescinded in
+    (offer, cancel)
+
+  let cancel_catalyst f = f ()
 end

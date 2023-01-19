@@ -26,6 +26,11 @@ module type S = sig
   val complete : 'a t -> 'a -> PostCommitCas.t
   val rescind : 'a t -> 'a option
   val get_result : 'a t -> 'a option
+
+  
+  type catalyst
+  val make_catalyst : unit -> 'a t * catalyst
+  val cancel_catalyst : catalyst -> unit
 end
 
 module Make (Sched : Scheduler.S) : S

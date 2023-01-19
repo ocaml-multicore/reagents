@@ -38,6 +38,10 @@ module type S = sig
   val attempt : ('a, 'b) t -> ('a, 'b option) t
   val run : ('a, 'b) t -> 'a -> 'b
 
+  type catalyst
+  
+  val catalyse : ('a, 'b) t -> 'a -> catalyst 
+  
   module Ref : Ref.S with type ('a, 'b) reagent = ('a, 'b) t
   module Channel : Channel.S with type ('a, 'b) reagent = ('a, 'b) t
 
