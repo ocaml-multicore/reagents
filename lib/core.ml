@@ -40,6 +40,7 @@ module type S = sig
   val attempt : ('a, 'b) t -> ('a, 'b option) t
   val run : ('a, 'b) t -> 'a -> 'b
   val catalyse : ('a, 'b) t -> 'a -> catalyst
+  val cancel_catalyst : catalyst -> unit
   val commit : ('a, 'a) t
   val can_cas_immediate : ('a, 'b) t -> reaction -> 'c offer option -> bool
 end
@@ -222,6 +223,8 @@ module Make (Sched : Scheduler.S) :
     match r.try_react v Reaction.empty (Some offer) with
     | Done _ | Retry -> assert false
     | Block | BlockAndRetry -> catalyst
+
+  let cancel_catalyst = Offer.cancel_catalyst
 
   let can_cas_immediate k rx = function
     | Some _ -> false

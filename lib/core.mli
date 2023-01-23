@@ -40,6 +40,7 @@ module type S = sig
   val attempt : ('a, 'b) t -> ('a, 'b option) t
   val run : ('a, 'b) t -> 'a -> 'b
   val catalyse : ('a, 'b) t -> 'a -> catalyst 
+  val cancel_catalyst : catalyst -> unit
   val commit : ('a, 'a) t
   val can_cas_immediate : ('a, 'b) t -> reaction -> 'c offer option -> bool
 end

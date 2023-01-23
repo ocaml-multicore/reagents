@@ -41,6 +41,7 @@ module type S = sig
   type catalyst
   
   val catalyse : ('a, 'b) t -> 'a -> catalyst 
+  val cancel_catalyst : catalyst -> unit
   
   module Ref : Ref.S with type ('a, 'b) reagent = ('a, 'b) t
   module Channel : Channel.S with type ('a, 'b) reagent = ('a, 'b) t
