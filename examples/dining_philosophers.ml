@@ -18,18 +18,14 @@
 let num_philosophers = 3
 let num_rounds = 10_000
 
-module S = Sched_ws.Make (struct
-  let num_domains = num_philosophers
-  let is_affine = true
-  let work_stealing = true
-end)
+module S =
+  (val Sched_ws.make 1 () (* todo: increase once kcas is auto-sorting entries *))
 
 module Reagents = Reagents.Make (S)
 open Reagents
 open Channel
 module Sync = Reagents.Sync
 module CDL = Sync.Countdown_latch
-open Printf
 
 type fork = { drop : (unit, unit) endpoint; take : (unit, unit) endpoint }
 
@@ -40,9 +36,9 @@ let mk_fork () =
 let drop f = swap f.drop
 let take f = swap f.take
 
-let eat l_fork r_fork i j =
+let eat l_fork r_fork _i _j =
   ignore @@ run (take l_fork <*> take r_fork) ();
-  printf "Philosopher %d eating in round %d\n%!" i j;
+  (* Printf.printf "Philosopher %d eating in round %d\n%!" i j; *)
   S.fork @@ run (drop l_fork);
   S.fork @@ run (drop r_fork)
 
@@ -57,12 +53,11 @@ let main () =
     for j = 1 to num_rounds do
       eat l_fork r_fork i j
     done;
-    printf "[%d] done\n%!" (S.get_qid ());
     run (CDL.count_down b) ()
   in
 
   for i = 1 to num_philosophers - 1 do
-    S.fork_on (work i) i
+    S.fork (work i)
   done;
   work 0 ();
   run (CDL.await b) ();

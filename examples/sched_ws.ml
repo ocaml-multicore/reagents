@@ -15,218 +15,170 @@
  *)
 
 module type S = sig
-  type queue_id = int
-  type thread_id = int
   type 'a cont
 
   val suspend : ('a cont -> 'a option) -> 'a
   val resume : 'a cont -> 'a -> unit
   val fork : (unit -> unit) -> unit
-  val fork_on : (unit -> unit) -> queue_id -> unit
   val yield : unit -> unit
-  val get_qid : unit -> queue_id
-  val get_tid : unit -> thread_id
+  val get_tid : unit -> int
   val run : (unit -> unit) -> unit
 
-  (* wrappers for dealing with broken tests *)
+  (* wrapper for tests that are expected to block (be it desirable or not) *)
   val run_allow_deadlock : (unit -> unit) -> unit
-  val run_with_timeout : (unit -> unit) -> unit
 end
 
 exception All_domains_idle
 
 module Make (S : sig
   val num_domains : int
-  val is_affine : bool
-  val work_stealing : bool
+
+  val raise_if_all_idle : bool
+  (** [raise_if_all_idle] may throw spuriously with multiple domains. *)
 end) : S = struct
   open Effect
   open Effect.Deep
 
-  type queue_id = int
-  type thread_id = int
-  type 'a cont = ('a, unit) continuation * queue_id
+  type 'a cont = ('a, unit) continuation
   type _ Effect.t += Suspend : ('a cont -> 'a option) -> 'a Effect.t
   type _ Effect.t += Resume : ('a cont * 'a) -> unit Effect.t
   type _ Effect.t += Fork : (unit -> unit) -> unit Effect.t
-  type _ Effect.t += ForkOn : (unit -> unit) * queue_id -> unit Effect.t
   type _ Effect.t += Yield : unit Effect.t
-  type _ Effect.t += GetTid : thread_id Effect.t
+  type _ Effect.t += GetTid : int Effect.t
 
   exception All_domains_idle
 
   let suspend f = perform (Suspend f)
   let resume t v = perform (Resume (t, v))
   let fork f = perform (Fork f)
-  let fork_on f qid = perform (ForkOn (f, qid))
   let yield () = perform Yield
   let get_tid () = perform GetTid
-  let num_threads = Atomic.make 0
-  let num_idling_domains = Atomic.make 0
 
-  let queues =
-    Array.init S.num_domains (fun _ -> Lockfree.Michael_scott_queue.create ())
+  type t = {
+    num_threads : int Atomic.t;
+    num_idling_domains : int Atomic.t;
+    mutable domain_ids : Domain.id list;
+    queues :
+      (Domain.id, (unit -> unit) Lockfree.Michael_scott_queue.t) Hashtbl.t;
+    current_tid : int Atomic.t;
+  }
 
-  let get_queue qid = Array.get queues qid
-  let dom_id_to_qid_map = Hashtbl.create S.num_domains
-  let first_unmapped_qid = ref 0
+  let fresh_tid t = Atomic.fetch_and_add t.current_tid 1
 
-  let add_dom_to_qid_map (dom_id : Domain.id) =
-    Hashtbl.add dom_id_to_qid_map dom_id !first_unmapped_qid;
-    first_unmapped_qid := !first_unmapped_qid + 1
+  let enqueue t (task : unit -> unit) =
+    let queue = Hashtbl.find t.queues (Domain.self ()) in
+    Lockfree.Michael_scott_queue.push queue task
 
-  let get_qid () =
-    let b = Lockfree.Backoff.create () in
-    let rec loop () =
-      try Hashtbl.find dom_id_to_qid_map (Domain.self ())
-      with Not_found ->
-        Lockfree.Backoff.once b;
-        loop ()
+  let take_one t (source : [ `Own | `Any ]) =
+    let domain_id =
+      match source with
+      | `Own -> Domain.self ()
+      | `Any ->
+          let k = Random.int (List.length t.domain_ids) in
+          List.nth t.domain_ids k
     in
-    loop ()
+    let queue = Hashtbl.find t.queues domain_id in
+    Lockfree.Michael_scott_queue.pop queue
 
-  let fresh_tid () = Oo.id (object end)
-  let enqueue c qid = Lockfree.Michael_scott_queue.push (get_queue qid) c
-
-  module Deadlock_detection = struct
-    let status = Atomic.make 0
-    let enable () = Atomic.decr status
-    let disable () = Atomic.incr status
-    let is_on () = Atomic.get status == 0
-  end
-
-  let dequeue qid =
-    let b = Lockfree.Backoff.create () in
+  let dequeue t =
     let rec loop ~idling =
-      let queue =
-        let qid =
-          if idling && S.work_stealing then Random.int S.num_domains else qid
-        in
-        get_queue qid
-      in
-      match Lockfree.Michael_scott_queue.pop queue with
+      match take_one t (if idling then `Any else `Own) with
       | Some k ->
-          if idling then Atomic.decr num_idling_domains;
-
+          if idling then Atomic.decr t.num_idling_domains;
           k ()
       | None ->
           if
-            S.num_domains == Atomic.get num_idling_domains
-            && Deadlock_detection.is_on ()
-            && not S.work_stealing
+            S.raise_if_all_idle
+            && S.num_domains == Atomic.get t.num_idling_domains
           then raise All_domains_idle;
 
-          if Atomic.get num_threads > 0 then (
-            if not idling then Atomic.incr num_idling_domains;
-
-            Lockfree.Backoff.once b;
+          if Atomic.get t.num_threads == 0 then ()
+          else (
+            if not idling then Atomic.incr t.num_idling_domains;
             loop ~idling:true)
     in
     loop ~idling:false
 
-  let rec spawn f (tid : thread_id) =
-    let current_qid = get_qid () in
-    Atomic.incr num_threads;
+  let rec spawn (t : t) f =
+    let tid = fresh_tid t in
+    Atomic.incr t.num_threads;
     (* begin *)
     match_with f ()
       {
         retc =
           (fun () ->
-            Atomic.decr num_threads;
-            dequeue current_qid);
+            Atomic.decr t.num_threads;
+            dequeue t);
         exnc =
           (fun e ->
-            print_string (Printexc.to_string e);
-            dequeue current_qid);
+            Printf.eprintf "uncaught exn: %s%!" (Printexc.to_string e);
+            Stdlib.exit 1);
         effc =
           (fun (type a) (e : a Effect.t) ->
             match e with
-            (* | () -> Atomic.decr num_threads; dequeue current_qid *)
             | Suspend f ->
                 Some
                   (fun (k : (a, _) continuation) ->
-                    match f (k, current_qid) with
-                    | None -> dequeue current_qid
-                    | Some v -> continue k v)
-            | Resume ((t, qid), v) ->
+                    match f k with None -> dequeue t | Some v -> continue k v)
+            | Resume (l, v) ->
                 Some
                   (fun (k : (a, _) continuation) ->
-                    if S.is_affine then (
-                      enqueue (fun () -> continue t v) qid;
-                      continue k ())
-                    else (
-                      enqueue (continue k) qid;
-                      continue t v))
+                    enqueue t (continue k);
+                    continue l v)
             | Fork f ->
                 Some
-                  (fun (k : (a, _) continuation) ->
-                    if S.is_affine then (
-                      enqueue (fun () -> spawn f (fresh_tid ())) current_qid;
-                      continue k ())
-                    else (
-                      enqueue (continue k) current_qid;
-                      spawn f (fresh_tid ())))
-            | ForkOn (f, qid) ->
-                Some
-                  (fun (k : (a, _) continuation) ->
-                    assert (0 <= qid && qid < S.num_domains);
-                    Deadlock_detection.disable ();
-
-                    if S.is_affine then (
-                      enqueue
-                        (fun () ->
-                          spawn
-                            (fun () ->
-                              Deadlock_detection.enable ();
-                              f ())
-                            (fresh_tid ()))
-                        qid;
-                      continue k ())
-                    else (
-                      enqueue
-                        (fun () ->
-                          Deadlock_detection.enable ();
-                          continue k ())
-                        qid;
-                      spawn f (fresh_tid ())))
+                  (fun (k : (unit, unit) continuation) ->
+                    enqueue t (continue k);
+                    spawn t f)
             | Yield ->
                 Some
                   (fun (k : (a, _) continuation) ->
-                    enqueue (continue k) current_qid;
-                    dequeue current_qid)
+                    enqueue t (continue k);
+                    dequeue t)
             | GetTid -> Some (fun (k : (a, _) continuation) -> continue k tid)
             | _ -> None (* forward the unhandled effects to the outer handler *));
       }
 
-  let run_with f num_domains =
-    let started = Atomic.make 0 in
+  let run f =
+    let t =
+      {
+        num_threads = Atomic.make 0;
+        num_idling_domains = Atomic.make 0;
+        domain_ids = [];
+        queues = Hashtbl.create 32;
+        current_tid = Atomic.make 0;
+      }
+    in
+
+    let started = Atomic.make false in
     let worker () =
-      let rec loop () =
-        if Atomic.get started = 1 then dequeue (get_qid ()) else loop ()
-      in
+      let rec loop () = if Atomic.get started then dequeue t else loop () in
       loop ()
     in
-    add_dom_to_qid_map (Domain.self ());
-    for _i = 1 to num_domains - 1 do
-      let new_domain = Domain.spawn worker in
-      add_dom_to_qid_map (Domain.get_id new_domain)
-    done;
-    spawn
-      (fun () ->
-        Atomic.incr started;
-        f ())
-      (fresh_tid ())
+    let domains =
+      let spawned =
+        List.init (S.num_domains - 1) (fun _ -> Domain.spawn worker)
+        |> List.map Domain.get_id
+      in
+      Domain.self () :: spawned
+    in
+    List.iter
+      (fun domain_id ->
+        Hashtbl.add t.queues domain_id (Lockfree.Michael_scott_queue.create ()))
+      domains;
+    t.domain_ids <- domains;
 
-  let run f = run_with f S.num_domains
+    spawn t (fun () ->
+        Atomic.set started true;
+        f ())
 
   let run_allow_deadlock f =
     match run f with exception All_domains_idle -> () | _ -> ()
-
-  let run_with_timeout f =
-    let running = Atomic.make true in
-    Domain.spawn (fun () ->
-        f ();
-        Atomic.set running true)
-    |> ignore;
-    Unix.sleepf 0.5
 end
+
+let make ?(raise_if_all_idle = false) num_domains () =
+  let module M = Make (struct
+    let num_domains = num_domains
+    let raise_if_all_idle = raise_if_all_idle
+  end) in
+  (module M : S)

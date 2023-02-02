@@ -19,13 +19,7 @@ let num_items = 1_000_000
 let items_per_dom = num_items / 2
 let () = Printf.printf "items_per_domain = %d\n%!" @@ items_per_dom
 
-module M = struct
-  let num_domains = 4
-  let is_affine = false
-  let work_stealing = true
-end
-
-module S = Sched_ws.Make (M)
+module S = (val Sched_ws.make 4 ())
 module Reagents = Reagents.Make (S)
 open Reagents
 open Printf
@@ -82,16 +76,12 @@ module Test (Stack : STACK) = struct
           let _ = Stack.pop q1 q2 in
           consume (i - 1)
     in
-    S.fork_on
-      (fun () ->
+    S.fork (fun () ->
         produce 1 q1 items_per_domain;
-        run (CDL.count_down b) ())
-      1;
-    S.fork_on
-      (fun () ->
+        run (CDL.count_down b) ());
+    S.fork (fun () ->
         produce 2 q2 items_per_domain;
-        run (CDL.count_down b) ())
-      2;
+        run (CDL.count_down b) ());
     consume items_per_domain;
     run (CDL.count_down b) ();
     run (CDL.await b) ()

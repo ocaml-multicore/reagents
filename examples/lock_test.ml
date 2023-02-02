@@ -14,14 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-open Printf
-
-module Scheduler = Sched_ws.Make (struct
-  let num_domains = 1
-  let is_affine = false
-  let work_stealing = false
-end)
-
+module Scheduler = (val Sched_ws.make 1 ())
 module Reagents = Reagents.Make (Scheduler)
 open Scheduler
 open Reagents
@@ -29,29 +22,15 @@ module Sync = Reagents.Sync
 module Lock = Sync.Lock
 module CV = Sync.Condition_variable
 
-let id_str () = sprintf "%d:%d" (get_qid ()) (get_tid ())
-
 let main () =
-  printf "[%s] starting main\n" (id_str ());
-
-  (* Test 1 *)
-  printf "**** Test 1 ****\n%!";
   let l = Lock.create () in
   let cv = CV.create () in
   run (Lock.acq l) ();
-  printf "[%s] Acquired lock\n" (id_str ());
   fork (fun () ->
-      printf "[%s] Starting waker thread\n" (id_str ());
       run (Lock.acq l) ();
-      printf "[%s] Acquired lock\n" (id_str ());
       CV.signal cv;
-      printf "[%s] Signal send\n" (id_str ());
-      assert (run (Lock.rel l) ());
-      printf "[%s] Released lock\n" (id_str ()));
-  printf "[%s] Going to wait on condition variable\n" (id_str ());
+      assert (run (Lock.rel l) ()));
   assert (CV.wait l cv);
-  printf "[%s] Woken up..\n" (id_str ());
-  assert (run (Lock.rel l) ());
-  printf "[%s] Released lock\n" (id_str ())
+  assert (run (Lock.rel l) ())
 
 let () = Scheduler.run main

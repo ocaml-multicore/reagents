@@ -14,54 +14,26 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-open Printf
-
-module Scheduler = Sched_ws.Make (struct
-  let num_domains = 1
-  let is_affine = false
-  let work_stealing = false
-end)
-
+module Scheduler = (val Sched_ws.make 1 ())
 module Reagents = Reagents.Make (Scheduler)
-open Scheduler
 open Reagents
-open Reagents.Ref
 
-let id_str () = sprintf "%d:%d" (get_qid ()) (get_tid ())
-
-let main () =
-  printf "[%s] starting main\n" (id_str ());
-
+let test1 () =
   (* Test 1 *)
-  printf "**** Test 1 ****\n%!";
-  let r = mk_ref 0 in
-  (* [foo] should be pure. Printing for illustrative purposes. *)
-  let foo ov () =
-    if ov = 0 then (
-      printf "[%s] Saw 0. Blocking..\n%!" (id_str ());
-      None)
-    else (
-      printf "[%s] Saw 1. Success. Set to 2.\n%!" (id_str ());
-      Some (2, ()))
-  in
-  fork (fun () -> run (upd r foo) ());
-  run (cas r 0 1) ();
-  printf "[%s] CAS 0 --> 1 succeeded\n%!" (id_str ());
-  Unix.sleep 1;
+  let r = Ref.mk_ref 0 in
+  let foo ov () = if ov = 0 then None else Some (2, ()) in
+  Scheduler.fork (fun () -> run (Ref.upd r foo) ());
+  run (Ref.cas r 0 1) ()
 
+let test2 () =
   (* Test 2 *)
-  printf "**** Test 2 ****\n%!";
+  let r = Ref.mk_ref 2 in
   let test2_rg =
-    read r >>= fun i ->
-    if i <> 3 then (
-      printf "[%s] Saw %d. Expecting 3. Blocking..\n%!" (id_str ()) i;
-      never)
-    else (
-      printf "[%s] Saw 3. Success.\n%!" (id_str ());
-      constant ())
+    Ref.read r >>= fun i -> if i <> 3 then never else constant ()
   in
-  fork (run test2_rg);
-  run (cas r 2 3) ();
-  printf "[%s] CAS 2 --> 3 succeeded\n%!" (id_str ())
+  Scheduler.fork (run test2_rg);
+  run (Ref.cas r 2 3) ()
 
-let () = Scheduler.run main
+let () =
+  Scheduler.run test1;
+  Scheduler.run test2

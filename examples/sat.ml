@@ -1,9 +1,4 @@
-module Scheduler = Sched_ws.Make (struct
-  let num_domains = 1
-  let is_affine = false
-  let work_stealing = false
-end)
-
+module Scheduler = (val Sched_ws.make 1 ())
 module Reagents = Reagents.Make (Scheduler)
 open Reagents
 

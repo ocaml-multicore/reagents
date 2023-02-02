@@ -15,19 +15,12 @@
  *)
 
 let num_doms = 2
-let num_items = 1_000_000
+let num_items = 300_000
 let items_per_dom = num_items / num_doms
 
-module M = struct
-  let num_domains = num_doms
-  let is_affine = false
-  let work_stealing = true
-end
-
-module S = Sched_ws.Make (M)
+module S = (val Sched_ws.make num_doms ())
 module Reagents = Reagents.Make (S)
 open Reagents
-open Printf
 
 module type QUEUE = sig
   type 'a t
@@ -93,13 +86,11 @@ module Test (Q : QUEUE) = struct
       if i >= items_per_domain then ()
       else match Q.pop q with None -> consume i | Some _ -> consume (i + 1)
     in
-    for i = 1 to num_doms - 1 do
-      S.fork_on
-        (fun () ->
+    for _ = 1 to num_doms - 1 do
+      S.fork (fun () ->
           produce items_per_domain;
           consume 0;
           run (CDL.count_down b) ())
-        i
     done;
     produce items_per_domain;
     consume 0;
@@ -110,7 +101,7 @@ end
 let main () =
   let module M = Test (MakeQ (Reagents.Data.MichaelScott_queue)) in
   let m, sd = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
-  printf "Reagent Lockfree.MSQueue: mean = %f, sd = %f tp=%f\n%!" m sd
+  Printf.printf "Reagent Lockfree.MSQueue: mean = %f, sd = %f tp=%f\n%!" m sd
     (float_of_int num_items /. m)
 
 let () = S.run main

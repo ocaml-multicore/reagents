@@ -28,6 +28,7 @@ module type S = sig
   val get_result : 'a t -> 'a option
 
   type catalyst
+
   val make_catalyst : unit -> 'a t * catalyst
   val cancel_catalyst : catalyst -> unit
 end
