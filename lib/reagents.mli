@@ -82,6 +82,12 @@ module type S = sig
   val run : ('a, 'b) t -> 'a -> 'b
   (** [run r v] runs the reagents [r] with value [v]. *)
 
+  type catalyst
+
+  val catalyse : ('a, 'b) t -> 'a -> catalyst 
+
+  val cancel_catalyst : catalyst -> unit
+
   module Ref : Ref.S with type ('a, 'b) reagent = ('a, 'b) t
   (** Shared memory references. *)
 

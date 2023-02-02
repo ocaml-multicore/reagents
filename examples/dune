@@ -92,3 +92,18 @@
  (name hw_queue)
  (modules hw_queue)
  (libraries reagents sched_ws))
+ 
+(test
+ (name catalyst_test)
+ (modules catalyst_test)
+ (libraries reagents sched_ws))
+
+(test
+ (name catalyst_test2)
+ (modules catalyst_test2)
+ (libraries reagents sched_ws))
+
+(test
+ (name catalyst_test3)
+ (modules catalyst_test3)
+ (libraries reagents sched_ws))
