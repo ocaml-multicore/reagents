@@ -1,43 +1,94 @@
-(executables
- (names
-  counter_test
-  dining_philosophers
-  eli_stack
-  lock_test
-  ref_channel
-  ref_test
-  swap_test2
-  queue_test
-  sat
-  ; Not working - usually they hang when running
-  reagent_queue_test
-  rec_test
-  stack_test
-  stack_test_compose
-  swap_test
-  three_way
-  two_way
-  hw_queue)
- (public_names
-  reagents_counter_test
-  reagents_dining_philosophers
-  reagents_eli_stack
-  reagents_lock_test
-  reagents_ref_channel
-  reagents_ref_test
-  reagents_swap_test2
-  reagents_queue_test
-  reagents_sat
-  ; Not working - usually they hang when running
-  reagents_reagent_queue_test
-  reagents_rec_test
-  reagents_stack_test ; Flakey test, sometimes passes.
-  reagents_stack_test_compose
-  reagents_swap_test
-  reagents_three_way
-  reagents_two_way
-  reagents_hw_queue)
- (libraries unix reagents)
- (flags
-  (:standard -w -32))
- (package reagents))
+(library
+ (name sched_ws)
+ (modules sched_ws)
+ (libraries lockfree unix))
+
+(test
+ (name counter_test)
+ (modules counter_test)
+ (libraries reagents sched_ws))
+
+(test
+ (name counter_test_blocking)
+ (modules counter_test_blocking)
+ (libraries reagents sched_ws))
+
+(test
+ (name dining_philosophers)
+ (modules dining_philosophers)
+ (libraries reagents sched_ws))
+
+(test
+ (name eli_stack)
+ (modules eli_stack)
+ (libraries reagents sched_ws))
+
+(test
+ (name lock_test)
+ (modules lock_test)
+ (libraries reagents sched_ws))
+
+(test
+ (name ref_channel)
+ (modules ref_channel)
+ (libraries reagents sched_ws))
+
+(test
+ (name ref_test)
+ (modules ref_test)
+ (libraries reagents sched_ws))
+
+(test
+ (name swap_test2)
+ (modules swap_test2)
+ (libraries reagents sched_ws))
+
+(test
+ (name queue_test)
+ (modules queue_test lock_queue)
+ (libraries reagents sched_ws))
+
+(test
+ (name reagent_queue_test)
+ (modules reagent_queue_test)
+ (libraries reagents sched_ws))
+
+(test
+ (name sat)
+ (modules sat)
+ (libraries reagents sched_ws))
+
+(test
+ (name rec_test)
+ (modules rec_test)
+ (libraries reagents sched_ws))
+
+(test
+ (name stack_test)
+ (modules stack_test lock_stack)
+ (libraries reagents sched_ws))
+
+(test
+ (name stack_test_compose)
+ (modules stack_test_compose)
+ (libraries reagents sched_ws))
+
+(test
+ (name swap_test)
+ (modules swap_test)
+ (libraries reagents sched_ws))
+
+(test
+ (name three_way)
+ (modules three_way)
+ (libraries reagents sched_ws))
+
+(test
+ (name two_way)
+ (modules two_way)
+ (libraries reagents sched_ws))
+
+(test
+ (name hw_queue)
+ (modules hw_queue)
+ (libraries reagents sched_ws))

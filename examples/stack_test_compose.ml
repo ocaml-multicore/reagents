@@ -15,15 +15,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-let print_usage_and_exit () =
-  print_endline @@ "Usage: " ^ Sys.argv.(0) ^ " <num_items>";
-  exit 0
-
-let num_items =
-  if Array.length Sys.argv < 2 then print_usage_and_exit ()
-  else
-    try int_of_string Sys.argv.(1) with Failure _ -> print_usage_and_exit ()
-
+let num_items = 10_000
 let items_per_dom = num_items / 2
 let () = Printf.printf "items_per_domain = %d\n%!" @@ items_per_dom
 
@@ -165,4 +157,4 @@ let main () =
 
   ()
 
-let () = S.run main
+let () = S.run_allow_deadlock main

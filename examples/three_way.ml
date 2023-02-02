@@ -42,4 +42,4 @@ let main () =
   fork (work sw2 2);
   work sw3 3 ()
 
-let _ = Scheduler.run main
+let _ = Scheduler.run_allow_deadlock main

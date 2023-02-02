@@ -27,8 +27,13 @@ module type S = sig
   val get_qid : unit -> queue_id
   val get_tid : unit -> thread_id
   val run : (unit -> unit) -> unit
+
+  (* wrappers for dealing with broken tests *)
+  val run_allow_deadlock : (unit -> unit) -> unit
+  val run_with_timeout : (unit -> unit) -> unit
 end
 
+exception All_domains_idle
 module Make (S : sig
   val num_domains : int
   val is_affine : bool
@@ -53,6 +58,7 @@ end) : S = struct
   let yield () = perform Yield
   let get_tid () = perform GetTid
   let num_threads = Atomic.make 0
+  let num_idling_domains = Atomic.make 0
 
   let queues =
     Array.init S.num_domains (fun _ -> Lockfree.Michael_scott_queue.create ())
@@ -78,18 +84,35 @@ end) : S = struct
   let fresh_tid () = Oo.id (object end)
   let enqueue c qid = Lockfree.Michael_scott_queue.push (get_queue qid) c
 
+  module Deadlock_detection = struct
+    let status = Atomic.make 0
+    let enable () = Atomic.decr status
+    let disable () = Atomic.incr status
+    let is_on () = Atomic.get status == 0
+  end
+
   let dequeue qid =
     let b = Lockfree.Backoff.create () in
     let queue = get_queue qid in
-    let rec loop () =
+    let rec loop ~idling =
       match Lockfree.Michael_scott_queue.pop queue with
-      | Some k -> k ()
+      | Some k ->
+          if idling then Atomic.decr num_idling_domains;
+
+          k ()
       | None ->
-          if Atomic.get num_threads <> 0 then (
+          if
+            S.num_domains == Atomic.get num_idling_domains
+            && Deadlock_detection.is_on ()
+          then raise All_domains_idle;
+
+          if Atomic.get num_threads > 0 then (
+            if not idling then Atomic.incr num_idling_domains;
+
             Lockfree.Backoff.once b;
-            loop ())
+            loop ~idling:true)
     in
-    loop ()
+    loop ~idling:false
 
   let rec spawn f (tid : thread_id) =
     let current_qid = get_qid () in
@@ -136,11 +159,24 @@ end) : S = struct
             | ForkOn (f, qid) ->
                 Some
                   (fun (k : (a, _) continuation) ->
+                    Deadlock_detection.disable ();
+
                     if S.is_affine then (
-                      enqueue (fun () -> spawn f (fresh_tid ())) qid;
+                      enqueue
+                        (fun () ->
+                          spawn
+                            (fun () ->
+                              Deadlock_detection.enable ();
+                              f ())
+                            (fresh_tid ()))
+                        qid;
                       continue k ())
                     else (
-                      enqueue (continue k) qid;
+                      enqueue
+                        (fun () ->
+                          Deadlock_detection.enable ();
+                          continue k ())
+                        qid;
                       spawn f (fresh_tid ())))
             | Yield ->
                 Some
@@ -171,4 +207,15 @@ end) : S = struct
       (fresh_tid ())
 
   let run f = run_with f S.num_domains
+
+  let run_allow_deadlock f =
+    match run f with exception All_domains_idle -> () | _ -> ()
+
+  let run_with_timeout f =
+    let running = Atomic.make true in
+    Domain.spawn (fun () ->
+        f ();
+        Atomic.set running true)
+    |> ignore;
+    Unix.sleepf 0.5
 end

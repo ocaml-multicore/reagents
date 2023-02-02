@@ -15,18 +15,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-let print_usage_and_exit () =
-  print_endline @@ "Usage: " ^ Sys.argv.(0) ^ " <num_philosophers> <num_rounds>";
-  exit 0
-
-let num_philosophers, num_rounds =
-  if Array.length Sys.argv < 3 then print_usage_and_exit ()
-  else
-    try
-      let a = int_of_string Sys.argv.(1) in
-      let b = int_of_string Sys.argv.(2) in
-      (a, b)
-    with Failure _ -> print_usage_and_exit ()
+let num_philosophers = 3
+let num_rounds = 10_000
 
 module S = Sched_ws.Make (struct
   let num_domains = num_philosophers
@@ -77,4 +67,4 @@ let main () =
   run (CDL.await b) ();
   exit 0
 
-let _ = S.run main
+let _ = S.run_allow_deadlock main

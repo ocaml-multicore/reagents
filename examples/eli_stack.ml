@@ -14,19 +14,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-let print_usage_and_exit () =
-  print_endline @@ "Usage: " ^ Sys.argv.(0) ^ " <num_domains> <num_items>";
-  exit 0
-
-let num_doms, num_items =
-  if Array.length Sys.argv < 3 then print_usage_and_exit ()
-  else
-    try
-      let a = int_of_string Sys.argv.(1) in
-      let b = int_of_string Sys.argv.(2) in
-      (a, b)
-    with Failure _ -> print_usage_and_exit ()
-
+let num_doms = 2
+let num_items = 100_000
 let items_per_dom = num_items / num_doms
 let () = Printf.printf "items_per_domain = %d\n%!" items_per_dom
 
@@ -125,13 +114,10 @@ end
 
 module Data = Reagents.Data
 
-let num_runs = 10
-
 let main () =
   let module M = Test (MakeS (Data.Elimination_stack)) in
   let m, sd = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 10 in
   printf "Elimination stack: mean = %f, sd = %f tp=%f\n%!" m sd
     (float_of_int num_items /. m)
 
-let () = S.run main
-let () = Unix.sleep 1
+let () = S.run_with_timeout main

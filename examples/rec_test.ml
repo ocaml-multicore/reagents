@@ -59,4 +59,4 @@ let main () =
 
   run (CDL.await cdl) ()
 
-let () = Scheduler.run main
+let () = Scheduler.run_with_timeout main

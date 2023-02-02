@@ -1,5 +1,5 @@
 (*
- * Copyright (c) 2015, Théo Laurent <theo.laurent@ens.fr>
+ * Copyright (c) 2015, KC Sivaramakrishnan <sk826@cl.cam.ac.uk>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -20,16 +20,24 @@ module Scheduler = Sched_ws.Make (struct
 end)
 
 module Reagents = Reagents.Make (Scheduler)
-open Scheduler
+module Counter = Reagents.Data.Counter
 open Reagents
-open Reagents.Channel
-open Reagents.Ref
 
 let main () =
-  Printf.printf "This example blocks\n%!";
-  let a, b = mk_chan () in
-  let r = mk_ref 0 in
-  fork (fun () -> run (swap a >>> upd r (fun _ () -> Some (1, ()))) ());
-  run (swap b >>> upd r (fun _ () -> Some (2, ()))) ()
+  let c = Counter.create 0 in
+  assert (run (Counter.inc c) () == 0); 
+  run
+    ( Counter.try_dec c >>= fun ov ->
+      match ov with
+      | Some 1 ->
+          Printf.printf "Counter is 0. Further decrement blocks the thread!\n%!";
+          constant ()
+      | _ -> failwith "impossible" )
+    ();
+  run (Counter.dec c) () |> ignore;
+  ()
 
-let () = Scheduler.run main
+let () =
+  match Scheduler.run main with
+  | exception Sched_ws.All_domains_idle -> ()
+  | () -> failwith "should have blocked"
