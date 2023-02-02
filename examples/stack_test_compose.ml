@@ -22,6 +22,7 @@ let () = Printf.printf "items_per_domain = %d\n%!" @@ items_per_dom
 module M = struct
   let num_domains = 3
   let is_affine = false
+  let work_stealing = false
 end
 
 module S = Sched_ws.Make (M)

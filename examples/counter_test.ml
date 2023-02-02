@@ -17,6 +17,7 @@
 module Scheduler = Sched_ws.Make (struct
   let num_domains = 1
   let is_affine = false
+  let work_stealing = false
 end)
 
 module Reagents = Reagents.Make (Scheduler)
@@ -32,4 +33,4 @@ let main () =
   assert (run (Counter.get c) () == 1);
   ()
 
-let () = Scheduler.run main
+let () = Scheduler.run_allow_deadlock main

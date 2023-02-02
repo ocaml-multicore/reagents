@@ -34,9 +34,11 @@ module type S = sig
 end
 
 exception All_domains_idle
+
 module Make (S : sig
   val num_domains : int
   val is_affine : bool
+  val work_stealing : bool
 end) : S = struct
   open Effect
   open Effect.Deep
@@ -50,6 +52,8 @@ end) : S = struct
   type _ Effect.t += ForkOn : (unit -> unit) * queue_id -> unit Effect.t
   type _ Effect.t += Yield : unit Effect.t
   type _ Effect.t += GetTid : thread_id Effect.t
+
+  exception All_domains_idle
 
   let suspend f = perform (Suspend f)
   let resume t v = perform (Resume (t, v))
@@ -93,8 +97,13 @@ end) : S = struct
 
   let dequeue qid =
     let b = Lockfree.Backoff.create () in
-    let queue = get_queue qid in
     let rec loop ~idling =
+      let queue =
+        let qid =
+          if idling && S.work_stealing then Random.int S.num_domains else qid
+        in
+        get_queue qid
+      in
       match Lockfree.Michael_scott_queue.pop queue with
       | Some k ->
           if idling then Atomic.decr num_idling_domains;
@@ -104,6 +113,7 @@ end) : S = struct
           if
             S.num_domains == Atomic.get num_idling_domains
             && Deadlock_detection.is_on ()
+            && not S.work_stealing
           then raise All_domains_idle;
 
           if Atomic.get num_threads > 0 then (
@@ -159,6 +169,7 @@ end) : S = struct
             | ForkOn (f, qid) ->
                 Some
                   (fun (k : (a, _) continuation) ->
+                    assert (0 <= qid && qid < S.num_domains);
                     Deadlock_detection.disable ();
 
                     if S.is_affine then (

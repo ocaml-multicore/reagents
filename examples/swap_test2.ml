@@ -17,6 +17,7 @@
 module Scheduler = Sched_ws.Make (struct
   let num_domains = 1
   let is_affine = false
+  let work_stealing = false
 end)
 
 module Reagents = Reagents.Make (Scheduler)
@@ -32,4 +33,4 @@ let main () =
   fork (fun () -> run (swap a >>> upd r (fun _ () -> Some (1, ()))) ());
   run (swap b >>> upd r (fun _ () -> Some (2, ()))) ()
 
-let () = Scheduler.run main
+let () = match Scheduler.run main with exception _ -> () | _ -> assert false

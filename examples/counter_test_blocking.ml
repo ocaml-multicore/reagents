@@ -17,6 +17,7 @@
 module Scheduler = Sched_ws.Make (struct
   let num_domains = 1
   let is_affine = false
+  let work_stealing = false
 end)
 
 module Reagents = Reagents.Make (Scheduler)
@@ -25,7 +26,7 @@ open Reagents
 
 let main () =
   let c = Counter.create 0 in
-  assert (run (Counter.inc c) () == 0); 
+  assert (run (Counter.inc c) () == 0);
   run
     ( Counter.try_dec c >>= fun ov ->
       match ov with
@@ -37,7 +38,4 @@ let main () =
   run (Counter.dec c) () |> ignore;
   ()
 
-let () =
-  match Scheduler.run main with
-  | exception Sched_ws.All_domains_idle -> ()
-  | () -> failwith "should have blocked"
+let () = Scheduler.run_allow_deadlock main

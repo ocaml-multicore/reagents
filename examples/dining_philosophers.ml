@@ -21,6 +21,7 @@ let num_rounds = 10_000
 module S = Sched_ws.Make (struct
   let num_domains = num_philosophers
   let is_affine = true
+  let work_stealing = false
 end)
 
 module Reagents = Reagents.Make (S)
