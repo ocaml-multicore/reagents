@@ -33,4 +33,7 @@ let main () =
   fork (fun () -> run (swap a >>> upd r (fun _ () -> Some (1, ()))) ());
   run (swap b >>> upd r (fun _ () -> Some (2, ()))) ()
 
-let () = Scheduler.run main
+let () = 
+  match Scheduler.run main with 
+  | exception _ -> () 
+  | _ -> assert false
