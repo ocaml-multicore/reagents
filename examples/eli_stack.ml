@@ -14,15 +14,15 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-let num_doms = 2
-let num_items = 100_000
+let num_doms = 4
+let num_items = 1_000_000
 let items_per_dom = num_items / num_doms
 let () = Printf.printf "items_per_domain = %d\n%!" items_per_dom
 
 module M = struct
   let num_domains = num_doms
   let is_affine = false
-  let work_stealing = false
+  let work_stealing = true
 end
 
 module S = Sched_ws.Make (M)
@@ -86,7 +86,6 @@ module Test (Q : STACK) = struct
     (* initialize work *)
     let rec produce = function
       | 0 ->
-          ();
           printf "[%d] production complete\n%!" (S.get_qid ())
       | i ->
           Q.push q i;
@@ -95,7 +94,6 @@ module Test (Q : STACK) = struct
     let rec consume i =
       match Q.pop q with
       | None ->
-          ();
           print_string @@ sprintf "[%d] consumed=%d\n%!" (S.get_qid ()) i
       | Some _ -> consume (i + 1)
     in
@@ -121,4 +119,4 @@ let main () =
   printf "Elimination stack: mean = %f, sd = %f tp=%f\n%!" m sd
     (float_of_int num_items /. m)
 
-let () = S.run_with_timeout main
+let () = S.run main

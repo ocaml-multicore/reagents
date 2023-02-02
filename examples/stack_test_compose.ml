@@ -15,14 +15,14 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-let num_items = 10_000
+let num_items = 1_000_000
 let items_per_dom = num_items / 2
 let () = Printf.printf "items_per_domain = %d\n%!" @@ items_per_dom
 
 module M = struct
-  let num_domains = 3
+  let num_domains = 4
   let is_affine = false
-  let work_stealing = false
+  let work_stealing = true
 end
 
 module S = Sched_ws.Make (M)

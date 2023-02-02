@@ -14,14 +14,14 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-let num_doms = 2
-let num_items = 10_000
+let num_doms = 4
+let num_items = 1_000_000
 let items_per_dom = num_items / num_doms
 
 module M = struct
   let num_domains = num_doms
   let is_affine = false
-  let work_stealing = false
+  let work_stealing = true
 end
 
 module S = Sched_ws.Make (M)
@@ -115,4 +115,4 @@ let main () =
   printf "Hand-written Lockfree.MSQueue: mean = %f, sd = %f tp=%f\n%!" m sd
     (float_of_int num_items /. m)
 
-let _f () = S.run main
+let () = S.run main

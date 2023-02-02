@@ -14,20 +14,18 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-let num_doms = 2
-let num_items = 100
+let num_doms = 4
+let num_items = 1_000_000
 let items_per_dom = num_items / num_doms
 
 module M = struct
   let num_domains = num_doms
   let is_affine = false
-  let work_stealing = false
+  let work_stealing = true
 end
 
 module S = Sched_ws.Make (M)
 module Reagents = Reagents.Make (S)
-open Reagents
-open Printf
 
 module type QUEUE = sig
   type 'a t
@@ -90,38 +88,36 @@ module Test (Q : QUEUE) = struct
           produce (i - 1)
     in
     let rec consume i =
-      match Q.pop q with
-      | None -> () (* printf "consumed=%d\n%!" i *)
-      | Some _ -> consume (i + 1)
+      if i >= items_per_domain then ()
+      else match Q.pop q with None -> consume i | Some _ -> consume (i + 1)
     in
     for i = 1 to num_doms - 1 do
       S.fork_on
         (fun () ->
           if i mod 2 == 0 then produce items_per_domain else consume 0;
-          run (CDL.count_down b) ())
+          Reagents.run (CDL.count_down b) ())
         i
     done;
     produce items_per_domain;
-    run (CDL.count_down b) ();
-    run (CDL.await b) ()
+    Reagents.run (CDL.count_down b) ();
+    Reagents.run (CDL.await b) ()
 end
-
-module Data = Reagents.Data
 
 let main () =
   let module M = Test (Lock_queue) in
   let m, sd = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
-  printf "Lock_queue : mean = %f, sd = %f tp=%f\n%!" m sd
+  Printf.printf "Lock_queue : mean = %f, sd = %f tp=%f\n%!" m sd
     (float_of_int num_items /. m);
 
-  let module M = Test (MakeQ (Data.MichaelScott_queue)) in
+  let module M = Test (MakeQ (Reagents.Data.MichaelScott_queue)) in
   let m, sd = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
-  printf "Reagent Lockfree.MSQueue: mean = %f, sd = %f tp=%f\n%!" m sd
+  Printf.printf "Reagent Lockfree.MSQueue: mean = %f, sd = %f tp=%f\n%!" m sd
     (float_of_int num_items /. m);
 
   let module M = Test (Lockfree.Michael_scott_queue) in
   let m, sd = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
-  printf "Hand-written Lockfree.MSQueue: mean = %f, sd = %f tp=%f\n%!" m sd
+  Printf.printf "Hand-written Lockfree.MSQueue: mean = %f, sd = %f tp=%f\n%!" m
+    sd
     (float_of_int num_items /. m)
 
 let () = S.run_allow_deadlock main

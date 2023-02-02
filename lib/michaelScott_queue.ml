@@ -63,7 +63,7 @@ struct
         let s = Ref.read_imm r in
         let fwd_tail nv () = ignore @@ Ref.cas_imm tail ov nv in
         match s with
-        | Nil -> Ref.cas r s n >>> post_commit (fwd_tail n)
+        | Nil -> Ref.cas ~never_block:true r s n >>> post_commit (fwd_tail n)
         | Next (_, _) as nv ->
             fwd_tail nv ();
             find_and_enq n tail)
