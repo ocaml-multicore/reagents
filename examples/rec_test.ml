@@ -46,7 +46,7 @@ let main () =
         assert (run (RLock.rel l) ());
         run (CDL.count_down cdl) ())
       (i mod num_domains);
-      Scheduler.fork_on
+    Scheduler.fork_on
       (fun () ->
         if run (RLock.try_acq l) () then (
           lock_and_call l 100;

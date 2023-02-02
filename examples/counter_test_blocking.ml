@@ -26,7 +26,7 @@ open Reagents
 
 let main () =
   let c = Counter.create 0 in
-  assert (run (Counter.inc c) () == 0); 
+  assert (run (Counter.inc c) () == 0);
   run
     ( Counter.try_dec c >>= fun ov ->
       match ov with
@@ -38,5 +38,4 @@ let main () =
   run (Counter.dec c) () |> ignore;
   ()
 
-let () =
-   Scheduler.run_allow_deadlock main 
+let () = Scheduler.run_allow_deadlock main

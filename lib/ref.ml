@@ -101,16 +101,20 @@ module Make (Sched : Scheduler.S) :
         let () =
           match offer with
           | None -> ()
-          | Some offer -> Lockfree.Michael_scott_queue.push ref.offers (Offer offer)
+          | Some offer ->
+              Lockfree.Michael_scott_queue.push ref.offers (Offer offer)
         in
         let old_value = Kcas.get ref.data in
         match f old_value arg with
         | None -> Block
         | Some (new_value, return_value) ->
             let cas =
-              PostCommitCas.cas ref.data old_value new_value (fun () -> wake_all ref.offers)
+              PostCommitCas.cas ref.data old_value new_value (fun () ->
+                  wake_all ref.offers)
             in
-            next_reagent.try_react return_value (Reaction.with_CAS reaction cas) offer
+            next_reagent.try_react return_value
+              (Reaction.with_CAS reaction cas)
+              offer
     in
     {
       always_commits = false;

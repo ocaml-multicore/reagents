@@ -34,6 +34,7 @@ module type S = sig
 end
 
 exception All_domains_idle
+
 module Make (S : sig
   val num_domains : int
   val is_affine : bool
