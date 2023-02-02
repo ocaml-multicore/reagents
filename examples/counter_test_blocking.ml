@@ -26,11 +26,17 @@ open Reagents
 
 let main () =
   let c = Counter.create 0 in
-  assert (run (Counter.get c) () == 0);
-  assert (run (Counter.inc c) () == 0);
-  assert (run (Counter.inc c) () == 1);
-  assert (run (Counter.dec c) () == 2);
-  assert (run (Counter.get c) () == 1);
+  assert (run (Counter.inc c) () == 0); 
+  run
+    ( Counter.try_dec c >>= fun ov ->
+      match ov with
+      | Some 1 ->
+          Printf.printf "Counter is 0. Further decrement blocks the thread!\n%!";
+          constant ()
+      | _ -> failwith "impossible" )
+    ();
+  run (Counter.dec c) () |> ignore;
   ()
 
-let () = Scheduler.run_allow_deadlock main
+let () =
+   Scheduler.run_allow_deadlock main 

@@ -33,6 +33,7 @@ module type S = sig
   val run_with_timeout : (unit -> unit) -> unit
 end
 
+exception All_domains_idle
 module Make (S : sig
   val num_domains : int
   val is_affine : bool
