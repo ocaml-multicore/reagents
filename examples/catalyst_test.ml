@@ -1,20 +1,15 @@
-module Scheduler = Sched_ws.Make (struct
-  let num_domains = 1
-  let is_affine = false
-  let work_stealing = false
-end)
-
+module Scheduler = (val Sched_ws.make 1 ())
 module Reagents = Reagents.Make (Scheduler)
 module R_data = Reagents.Data
 module Counter = R_data.Counter
 open Reagents
 
 let main () =
-  let receiver_counter = Atomic.make 0 in 
-  let assert_counter v = assert (Atomic.get receiver_counter == v) in 
+  let receiver_counter = Atomic.make 0 in
+  let assert_counter v = assert (Atomic.get receiver_counter == v) in
 
   let (c1 : (unit, unit) Channel.endpoint), c2 = Channel.mk_chan () in
-  
+
   let receiver =
     let open Reagents in
     Channel.swap c2 >>> lift (fun () -> Atomic.incr receiver_counter)

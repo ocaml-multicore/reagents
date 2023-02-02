@@ -39,11 +39,6 @@
  (libraries reagents sched_ws))
 
 (test
- (name swap_test2)
- (modules swap_test2)
- (libraries reagents sched_ws))
-
-(test
  (name queue_test)
  (modules queue_test lock_queue)
  (libraries reagents sched_ws))
@@ -79,20 +74,10 @@
  (libraries reagents sched_ws))
 
 (test
- (name three_way)
- (modules three_way)
- (libraries reagents sched_ws))
-
-(test
- (name two_way)
- (modules two_way)
- (libraries reagents sched_ws))
-
-(test
  (name hw_queue)
  (modules hw_queue)
  (libraries reagents sched_ws))
- 
+
 (test
  (name catalyst_test)
  (modules catalyst_test)
@@ -106,4 +91,9 @@
 (test
  (name catalyst_test3)
  (modules catalyst_test3)
+ (libraries reagents sched_ws))
+
+(test
+ (name pair_not_parallel)
+ (modules pair_not_parallel)
  (libraries reagents sched_ws))

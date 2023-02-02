@@ -14,17 +14,16 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-module Scheduler = Sched_ws.Make (struct
-  let num_domains = 1
-  let is_affine = false
-  let work_stealing = false
-end)
-
+open Printf
+module Scheduler = (val Sched_ws.make ~raise_if_all_idle:true 1 ())
 module Reagents = Reagents.Make (Scheduler)
-module Counter = Reagents.Data.Counter
+module R_data = Reagents.Data
+module Counter = R_data.Counter
 open Reagents
 
 let main () =
+  (* Test 1 *)
+  printf "**** Test 1 ****\n%!";
   let c = Counter.create 0 in
   assert (run (Counter.get c) () == 0);
   assert (run (Counter.inc c) () == 0);

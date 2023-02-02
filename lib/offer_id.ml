@@ -1,4 +1,5 @@
 type t = int
+
 let make v = v
 
 module Set = Set.Make (struct
@@ -6,5 +7,3 @@ module Set = Set.Make (struct
 
   let compare = compare
 end)
-
-

@@ -27,4 +27,4 @@ module type S = sig
   val with_post_commit : t -> (unit -> unit) -> t
 end
 
-module Make (Sched : Scheduler.S) : S 
+module Make (Sched : Scheduler.S) : S

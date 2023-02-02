@@ -18,13 +18,7 @@ let num_doms = 4
 let num_items = 1_000_000
 let items_per_dom = num_items / num_doms
 
-module M = struct
-  let num_domains = num_doms
-  let is_affine = false
-  let work_stealing = true
-end
-
-module S = Sched_ws.Make (M)
+module S = (val Sched_ws.make num_doms ())
 module Reagents = Reagents.Make (S)
 open Reagents
 open Printf
@@ -90,18 +84,15 @@ module Test (Q : QUEUE) = struct
     in
     let rec consume i =
       match Q.pop q with
-      | None ->
-          ();
-          printf "consumed=%d\n%!" i
+      | None -> ()
+      (* printf "consumed=%d\n%!" i *)
       | Some _ -> consume (i + 1)
     in
-    for i = 1 to num_doms - 1 do
-      S.fork_on
-        (fun () ->
+    for _ = 1 to num_doms - 1 do
+      S.fork (fun () ->
           produce items_per_domain;
           consume 0;
           run (CDL.count_down b) ())
-        i
     done;
     produce items_per_domain;
     consume 0;

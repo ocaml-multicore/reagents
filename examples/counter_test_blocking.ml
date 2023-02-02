@@ -14,12 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-module Scheduler = Sched_ws.Make (struct
-  let num_domains = 1
-  let is_affine = false
-  let work_stealing = false
-end)
-
+module Scheduler = (val Sched_ws.make ~raise_if_all_idle:true 1 ())
 module Reagents = Reagents.Make (Scheduler)
 module Counter = Reagents.Data.Counter
 open Reagents
