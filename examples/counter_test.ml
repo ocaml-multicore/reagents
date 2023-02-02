@@ -14,8 +14,6 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-open Printf
-
 module Scheduler = Sched_ws.Make (struct
   let num_domains = 1
   let is_affine = false
@@ -23,34 +21,16 @@ module Scheduler = Sched_ws.Make (struct
 end)
 
 module Reagents = Reagents.Make (Scheduler)
-module R_data = Reagents.Data
-module Counter = R_data.Counter
-open Scheduler
+module Counter = Reagents.Data.Counter
 open Reagents
 
-let id_str () = sprintf "%d:%d" (get_qid ()) (get_tid ())
-
 let main () =
-  printf "[%s] starting main\n" (id_str ());
-
-  (* Test 1 *)
-  printf "**** Test 1 ****\n%!";
   let c = Counter.create 0 in
-  printf "%d\n%!" @@ run (Counter.get c) ();
-  printf "%d\n%!" @@ run (Counter.inc c) ();
-  printf "%d\n%!" @@ run (Counter.inc c) ();
-  printf "%d\n%!" @@ run (Counter.dec c) ();
-  run
-    ( Counter.try_dec c >>= fun ov ->
-      match ov with
-      | Some 1 ->
-          printf "Counter is 0. Further decrement blocks the thread!\n%!";
-          constant ()
-      | _ -> failwith "impossible" )
-    ();
-  printf "%d\n%!" @@ run (Counter.dec c) ();
-  printf "Should not see this\n";
-
+  assert (run (Counter.get c) () == 0);
+  assert (run (Counter.inc c) () == 0);
+  assert (run (Counter.inc c) () == 1);
+  assert (run (Counter.dec c) () == 2);
+  assert (run (Counter.get c) () == 1);
   ()
 
 let () = Scheduler.run_allow_deadlock main

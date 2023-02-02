@@ -158,4 +158,4 @@ let main () =
 
   ()
 
-let () = S.run main
+let () = S.run_allow_deadlock main
