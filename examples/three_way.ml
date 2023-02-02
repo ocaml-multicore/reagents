@@ -14,27 +14,26 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-module Scheduler = Sched_ws.Make(
-  struct
-    let num_domains = 1
-    let is_affine = false
-  end)
+module Scheduler = Sched_ws.Make (struct
+  let num_domains = 1
+  let is_affine = false
+end)
+
 module Reagents = Reagents.Make (Scheduler)
 open Scheduler
 open Reagents
 open Reagents.Channel
 
 let mk_tw_chan () =
-  let ab,ba = mk_chan ~name:"ab" () in
-  let bc,cb = mk_chan ~name:"bc" () in
-  let ac,ca = mk_chan ~name:"ac" () in
-  (ab,ac), (ba,bc), (ca,cb)
+  let ab, ba = mk_chan ~name:"ab" () in
+  let bc, cb = mk_chan ~name:"bc" () in
+  let ac, ca = mk_chan ~name:"ac" () in
+  ((ab, ac), (ba, bc), (ca, cb))
 
-let tw_swap (c1, c2) =
-  swap c1 <*> swap c2
+let tw_swap (c1, c2) = swap c1 <*> swap c2
 
 let work sw v () =
-  let (x,y) = run (tw_swap sw) v in
+  let x, y = run (tw_swap sw) v in
   Printf.printf "%d %d" x y
 
 let main () =

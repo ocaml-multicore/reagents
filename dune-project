@@ -2,7 +2,6 @@
 (name reagents)
 
 (generate_opam_files true)
-(formatting disabled)
 
 (license BSD-3-clause)
 (maintainers "KC Sivaramakrishnan <sk826@cl.cam.ac.uk>")

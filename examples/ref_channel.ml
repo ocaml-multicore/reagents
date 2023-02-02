@@ -1,15 +1,15 @@
 module type REF_CHANNEL = sig
-  type ('a,'b) reagent
+  type ('a, 'b) reagent
   type 'a channel
+
   val mk_chan : unit -> 'a channel
-  val send : 'a channel -> ('a,unit) reagent
-  val recv : 'a channel -> (unit,'a) reagent
+  val send : 'a channel -> ('a, unit) reagent
+  val recv : 'a channel -> (unit, 'a) reagent
 end
 
-module Ref_channel(Reagents : Reagents.S)
-  : REF_CHANNEL with type ('a,'b) reagent = ('a,'b) Reagents.t = struct
-
-  type ('a,'b) reagent = ('a,'b) Reagents.t
+module Ref_channel (Reagents : Reagents.S) :
+  REF_CHANNEL with type ('a, 'b) reagent = ('a, 'b) Reagents.t = struct
+  type ('a, 'b) reagent = ('a, 'b) Reagents.t
 
   open Reagents
 
@@ -19,27 +19,24 @@ module Ref_channel(Reagents : Reagents.S)
 
   let send r =
     Ref.upd r (fun st v ->
-      match st with
-      | None -> Some (Some v, ())
-      | _ -> None)
+        match st with None -> Some (Some v, ()) | _ -> None)
 
   let recv r =
     Ref.upd r (fun st _ ->
-      match st with
-      | None -> None
-      | Some v -> Some (None, v))
- end
+        match st with None -> None | Some v -> Some (None, v))
+end
 
 open Printf
-module Scheduler = Sched_ws.Make(
-  struct
-    let num_domains = 1
-    let is_affine = false
-  end)
+
+module Scheduler = Sched_ws.Make (struct
+  let num_domains = 1
+  let is_affine = false
+end)
+
 module Reagents = Reagents.Make (Scheduler)
 open Scheduler
 open Reagents
-module Channel = Ref_channel(Reagents)
+module Channel = Ref_channel (Reagents)
 open Channel
 
 let id_str () = sprintf "%d:%d" (get_qid ()) (get_tid ())

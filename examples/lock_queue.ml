@@ -20,46 +20,37 @@ let max_iters = 100000
 
 let rec lock m = function
   | 0 ->
-      begin
-        ignore (Unix.select [] [] [] 0.1);
-        lock m max_iters
-      end
-  | n ->
-      if Atomic.compare_and_set m false true then ()
-      else lock m (n - 1)
+      ignore (Unix.select [] [] [] 0.1);
+      lock m max_iters
+  | n -> if Atomic.compare_and_set m false true then () else lock m (n - 1)
 
 let lock m = lock m max_iters
-
-let rec unlock m =
-  if Atomic.compare_and_set m true false then ()
-  else unlock m
-
+let rec unlock m = if Atomic.compare_and_set m true false then () else unlock m
 let create () : 'a t = (ref ([], []), Atomic.make false)
 
-let push (q,m) v =
+let push (q, m) v =
   lock m;
-  let (front,back) = !q in
-  q := (front,v::back);
+  let front, back = !q in
+  q := (front, v :: back);
   unlock m
 
-let pop (q,m) =
+let pop (q, m) =
   lock m;
-  let (front, back) = !q in
+  let front, back = !q in
   let r =
     match front with
-    | x::xs ->
-        ( q := (xs,back);
-          Some x )
-    | [] ->
-        begin
-          match back with
-          | [] -> None
-          | xs ->
-              begin
-                match List.rev xs with
-                | [] -> failwith "impossible"
-                | x::xs -> ( q := (xs,[]); Some x)
-              end
-        end
+    | x :: xs ->
+        q := (xs, back);
+        Some x
+    | [] -> (
+        match back with
+        | [] -> None
+        | xs -> (
+            match List.rev xs with
+            | [] -> failwith "impossible"
+            | x :: xs ->
+                q := (xs, []);
+                Some x))
   in
-  unlock m; r
+  unlock m;
+  r

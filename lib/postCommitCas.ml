@@ -15,16 +15,15 @@
  *)
 
 type 'a ref = 'a Kcas.ref
+
 let ref = Kcas.ref
 let get = Kcas.get
 
-type cas_kind =
-  | Real of Kcas.t
-  | Imm of bool
-
+type cas_kind = Real of Kcas.t | Imm of bool
 type t = cas_kind * (unit -> unit)
 
-let cas r old_v new_v post_commit = (Real (Kcas.mk_cas r old_v new_v), post_commit)
+let cas r old_v new_v post_commit =
+  (Real (Kcas.mk_cas r old_v new_v), post_commit)
 
 let is_on_ref (c, _) r =
   match c with
@@ -38,16 +37,16 @@ let commit (cas, post_commit) =
   | Imm v -> if v then Some post_commit else None
 
 let return v post_commit = (Imm v, post_commit)
-
-let (>>) = fun f g x -> f(g(x))
+let ( >> ) f g x = f (g x)
 
 let kCAS lst =
-  let (cas_list, post_commit, live) =
-    List.fold_left (fun (l1,l2,live) (cas,pc) ->
-      match cas with
-      | Real c -> (c::l1, pc >> l2, live)
-      | Imm v -> (l1, pc >> l2, v && live)) ([],(fun () -> ()), true) lst
+  let cas_list, post_commit, live =
+    List.fold_left
+      (fun (l1, l2, live) (cas, pc) ->
+        match cas with
+        | Real c -> (c :: l1, pc >> l2, live)
+        | Imm v -> (l1, pc >> l2, v && live))
+      ([], (fun () -> ()), true)
+      lst
   in
-  if live && Kcas.kCAS cas_list
-  then Some (post_commit)
-  else None
+  if live && Kcas.kCAS cas_list then Some post_commit else None
