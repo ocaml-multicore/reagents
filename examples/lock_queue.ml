@@ -14,43 +14,28 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-type 'a t = ('a list * 'a list) ref * bool Atomic.t
+type 'a t = ('a list * 'a list) Lock.t
 
-let max_iters = 100000
+let create () : 'a t = Lock.make ([], [])
 
-let rec lock m = function
-  | 0 ->
-      ignore (Unix.select [] [] [] 0.1);
-      lock m max_iters
-  | n -> if Atomic.compare_and_set m false true then () else lock m (n - 1)
+let push q v =
+  let hold, (front, back) = Lock.acquire q in
+  Lock.release hold (front, v :: back)
 
-let lock m = lock m max_iters
-let rec unlock m = if Atomic.compare_and_set m true false then () else unlock m
-let create () : 'a t = (ref ([], []), Atomic.make false)
-
-let push (q, m) v =
-  lock m;
-  let front, back = !q in
-  q := (front, v :: back);
-  unlock m
-
-let pop (q, m) =
-  lock m;
-  let front, back = !q in
-  let r =
-    match front with
-    | x :: xs ->
-        q := (xs, back);
-        Some x
-    | [] -> (
-        match back with
-        | [] -> None
-        | xs -> (
-            match List.rev xs with
-            | [] -> failwith "impossible"
-            | x :: xs ->
-                q := (xs, []);
-                Some x))
-  in
-  unlock m;
-  r
+let pop q =
+  let hold, (front, back) = Lock.acquire q in
+  match front with
+  | x :: xs ->
+      Lock.release hold (xs, back);
+      Some x
+  | [] -> (
+      match back with
+      | [] ->
+          Lock.release hold ([], []);
+          None
+      | xs -> (
+          match List.rev xs with
+          | [] -> failwith "impossible"
+          | x :: xs ->
+              Lock.release hold (xs, []);
+              Some x))
