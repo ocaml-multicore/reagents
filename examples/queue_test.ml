@@ -101,6 +101,11 @@ let main () =
   Printf.printf "Lock_queue : mean = %f, sd = %f tp=%f\n%!" m sd
     (float_of_int num_items /. m);
 
+  let module M = Test (Two_lock_queue) in
+  let m, sd = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
+  Printf.printf "Two_lock_queue : mean = %f, sd = %f tp=%f\n%!" m sd
+    (float_of_int num_items /. m);
+
   let module M = Test (MakeQ (Reagents.Data.MichaelScott_queue)) in
   let m, sd = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
   Printf.printf "Reagent Lockfree.MSQueue: mean = %f, sd = %f tp=%f\n%!" m sd
