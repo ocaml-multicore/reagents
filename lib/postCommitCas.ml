@@ -14,26 +14,29 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-type 'a ref = 'a Kcas.ref
+module Loc = Kcas.Loc
+module Op = Kcas.Op
 
-let ref = Kcas.ref
-let get = Kcas.get
+type 'a ref = 'a Loc.t
 
-type cas_kind = Real of Kcas.t | Imm of bool
+let ref = Loc.make
+let get = Loc.get
+
+type cas_kind = Real of Op.t | Imm of bool
 type t = cas_kind * (unit -> unit)
 
 let cas r old_v new_v post_commit =
-  (Real (Kcas.mk_cas r old_v new_v), post_commit)
+  (Real (Op.make_cas r old_v new_v), post_commit)
 
 let is_on_ref (c, _) r =
   match c with
   (* | Real cas -> Kcas.is_on_ref cas r *)
-  | Real cas -> Kcas.is_on_ref cas r
+  | Real cas -> Op.is_on_loc cas r
   | _ -> false
 
 let commit (cas, post_commit) =
   match cas with
-  | Real cas -> if Kcas.commit cas then Some post_commit else None
+  | Real cas -> if Op.atomic cas then Some post_commit else None
   | Imm v -> if v then Some post_commit else None
 
 let return v post_commit = (Imm v, post_commit)
@@ -49,4 +52,4 @@ let kCAS lst =
       ([], (fun () -> ()), true)
       lst
   in
-  if live && Kcas.kCAS cas_list then Some post_commit else None
+  if live && Op.atomically cas_list then Some post_commit else None

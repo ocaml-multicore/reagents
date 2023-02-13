@@ -15,7 +15,7 @@
   (ocaml (>= 5.0))
   (lockfree (>= 0.3.0))
   domainslib
-  (kcas (>= 0.1.5))
+  (kcas (>= 0.2.0))
   alcotest)
  (synopsis "Composable lock-free data and synchronization structures")
  (description "Reagents - Composable lock-free data and synchronization structures"))

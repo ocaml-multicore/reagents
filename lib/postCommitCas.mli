@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-type 'a ref = 'a Kcas.ref
+type 'a ref = 'a Kcas.Loc.t
 
 val ref : 'a -> 'a ref
 val get : 'a ref -> 'a

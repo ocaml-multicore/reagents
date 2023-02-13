@@ -34,6 +34,8 @@ end
 
 module Make (Sched : Scheduler.S) :
   S with type ('a, 'b) reagent = ('a, 'b) Core.Make(Sched).t = struct
+  module Loc = Kcas.Loc
+  module Op = Kcas.Op
   module Offer = Offer.Make (Sched)
   module Core = Core.Make (Sched)
   module Reaction = Reaction.Make (Sched)
@@ -41,7 +43,7 @@ module Make (Sched : Scheduler.S) :
   type mono_offer = Offer : 'a Offer.t -> mono_offer
 
   type 'a ref = {
-    data : 'a Kcas.ref;
+    data : 'a Loc.t;
     offers : mono_offer Lockfree.Michael_scott_queue.t;
   }
 
@@ -50,7 +52,7 @@ module Make (Sched : Scheduler.S) :
   open Core
 
   let mk_ref v =
-    { data = Kcas.ref v; offers = Lockfree.Michael_scott_queue.create () }
+    { data = Loc.make v; offers = Lockfree.Michael_scott_queue.create () }
 
   let rec read : 'a 'r. 'a ref -> ('a, 'r) reagent -> (unit, 'r) reagent =
    fun r k ->
@@ -60,7 +62,7 @@ module Make (Sched : Scheduler.S) :
         | None -> ()
         | Some offer -> Lockfree.Michael_scott_queue.push r.offers (Offer offer)
       in
-      let v = Kcas.get r.data in
+      let v = Loc.get r.data in
       k.try_react v reaction offer
     in
     {
@@ -70,7 +72,7 @@ module Make (Sched : Scheduler.S) :
     }
 
   let read r = read r Core.commit
-  let read_imm r = Kcas.get r.data
+  let read_imm r = Loc.get r.data
 
   let wake_all q =
     let rec drain_offers offers =
@@ -83,7 +85,7 @@ module Make (Sched : Scheduler.S) :
       (fun (Offer offer) -> ignore (Option.is_none (Offer.rescind offer)))
       offers
 
-  let cas_imm r expect update = Kcas.cas r.data expect update
+  let cas_imm r expect update = Loc.compare_and_set r.data expect update
 
   let rec upd :
             'a 'b 'c 'r.
@@ -96,11 +98,11 @@ module Make (Sched : Scheduler.S) :
     let on_failure = if never_block then Core.Retry else Core.Block in
     let try_react arg reaction offer =
       if can_cas_immediate next_reagent reaction offer then
-        let old_value = Kcas.get ref.data in
+        let old_value = Loc.get ref.data in
         match f old_value arg with
         | None -> on_failure
         | Some (new_value, c) ->
-            if Kcas.cas ref.data old_value new_value then (
+            if cas_imm ref old_value new_value then (
               wake_all ref.offers;
               next_reagent.try_react c reaction offer)
             else Retry
@@ -111,7 +113,7 @@ module Make (Sched : Scheduler.S) :
           | Some offer ->
               Lockfree.Michael_scott_queue.push ref.offers (Offer offer)
         in
-        let old_value = Kcas.get ref.data in
+        let old_value = Loc.get ref.data in
         match f old_value arg with
         | None -> on_failure
         | Some (new_value, return_value) ->

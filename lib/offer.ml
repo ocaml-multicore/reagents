@@ -34,6 +34,8 @@ module type S = sig
 end
 
 module Make (Sched : Scheduler.S) : S = struct
+  module Loc = Kcas.Loc
+
   type 'a status =
     | Empty
     | Waiting of unit Sched.cont
@@ -41,38 +43,36 @@ module Make (Sched : Scheduler.S) : S = struct
     | Rescinded
     | Completed of 'a
 
-  type 'a t = 'a status Kcas.ref
+  type 'a t = 'a status Loc.t
 
-  let make () = Kcas.ref Empty
-  let get_id r = Offer_id.make (Kcas.get_id r)
-  let equal o1 o2 = Kcas.get_id o1 = Kcas.get_id o2
+  let make () = Loc.make Empty
+  let get_id r = Offer_id.make (Loc.get_id r)
+  let equal o1 o2 = Loc.get_id o1 = Loc.get_id o2
 
   let is_active o =
-    match Kcas.get o with
+    match Loc.get o with
     | Empty | Waiting _ | Catalyst -> true
     | Rescinded | Completed _ -> false
 
   let wait r =
     Sched.suspend (fun k ->
-        let cas_result =
-          Kcas.map r (fun v ->
+        match
+          Loc.update r (fun v ->
               match v with
-              | Empty -> Some (Waiting k)
+              | Empty -> Waiting k
               | Waiting _ | Catalyst -> failwith "Offer.wait(1)"
-              | Completed _ | Rescinded -> None)
-        in
-        match cas_result with
+              | Completed _ | Rescinded -> raise Exit)
+        with
         (* If CAS was a success, then it is no longer this thread's responsibiliy to
          * resume itself. *)
-        | Kcas.Success _ -> None
+        | _ -> None
         (* If the CAS failed, then another thread has already changed the offer from
          * [Empty] to [Completed] or [Rescinded]. In this case, thread shouldn't
          * wait. *)
-        | Kcas.Aborted -> Some ()
-        | Kcas.Failed -> failwith "Offer.wait(2)")
+        | exception Exit -> Some ())
 
   let complete r new_v =
-    let old_v = Kcas.get r in
+    let old_v = Loc.get r in
     match old_v with
     | Waiting k ->
         PostCommitCas.cas r old_v (Completed new_v) (fun () ->
@@ -82,27 +82,26 @@ module Make (Sched : Scheduler.S) : S = struct
     | Rescinded | Completed _ -> PostCommitCas.return false (fun () -> ())
 
   let rescind r =
-    let cas_result =
-      Kcas.map r (fun v ->
-          match v with
-          | Empty | Waiting _ -> Some Rescinded
-          | Rescinded | Completed _ | Catalyst -> None)
-    in
-    (match cas_result with
-    | Kcas.Success (Waiting t) -> Sched.resume t ()
-    | _ -> ());
-    match Kcas.get r with
+    (match
+       Loc.update r (fun v ->
+           match v with
+           | Empty | Waiting _ -> Rescinded
+           | Rescinded | Completed _ | Catalyst -> raise Exit)
+     with
+    | Waiting t -> Sched.resume t ()
+    | _ | (exception Exit) -> ());
+    match Loc.get r with
     | Rescinded | Catalyst -> None
     | Completed v -> Some v
     | _ -> failwith "Offer.rescind"
 
-  let get_result r = match Kcas.get r with Completed v -> Some v | _ -> None
+  let get_result r = match Loc.get r with Completed v -> Some v | _ -> None
 
   type catalyst = unit -> unit
 
   let make_catalyst () =
-    let offer = Kcas.ref Catalyst in
-    let cancel () = Kcas.set offer Rescinded in
+    let offer = Loc.make Catalyst in
+    let cancel () = Loc.set offer Rescinded in
     (offer, cancel)
 
   let cancel_catalyst f = f ()
