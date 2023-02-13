@@ -40,7 +40,13 @@
 
 (test
  (name queue_test)
- (modules queue_test lock_queue)
+ (modules
+  queue_test
+  lock_queue
+  two_lock_queue
+  lock
+  tx_linked_queue
+  tx_two_stack_queue)
  (libraries reagents sched_ws))
 
 (test
