@@ -13,9 +13,7 @@ depends: [
   "dune" {>= "3.0"}
   "ocaml" {>= "5.0"}
   "lockfree" {>= "0.3.0"}
-  "domainslib"
   "kcas" {>= "0.2.0"}
-  "alcotest"
   "odoc" {with-doc}
 ]
 build: [
