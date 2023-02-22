@@ -48,11 +48,18 @@ module type S = sig
   val run : ('a, 'b) t -> 'a -> 'b
   (** [run r v] runs the reagents [r] with value [v]. *)
 
+  module Catalyst : sig
+    type catalyst
+    (** Type providing a handle for passively invoked reagent. Such a reagent 
+      remains active and available to react with other reagents until cancelled. *)
 
-  type catalyst
+    val catalyse : ('a, 'b) t -> 'a -> catalyst
+    (** [catalyse t v] invokes provided reagent as catalyst. *)
 
-  val catalyse : ('a, 'b) t -> 'a -> catalyst
-  val cancel_catalyst : catalyst -> unit
+    val cancel : catalyst -> unit
+    (** [cancel c] cancels an active catalyst. If it was already cancelled, 
+      the call has no effect. *)
+  end
 
   module Ref : Ref.S with type ('a, 'b) reagent = ('a, 'b) t
   (** Shared memory references. *)

@@ -1,7 +1,6 @@
 module type S = sig
   type reaction
   type 'a offer
-  type catalyst
   type 'a result = BlockAndRetry | Block | Retry | Done of 'a
 
   type ('a, 'b) t = {
@@ -22,8 +21,14 @@ module type S = sig
   val ( <*> ) : ('a, 'b) t -> ('a, 'c) t -> ('a, 'b * 'c) t
   val attempt : ('a, 'b) t -> ('a, 'b option) t
   val run : ('a, 'b) t -> 'a -> 'b
-  val catalyse : ('a, 'b) t -> 'a -> catalyst
-  val cancel_catalyst : catalyst -> unit
+
+  module Catalyst : sig
+    type catalyst
+
+    val catalyse : ('a, 'b) t -> 'a -> catalyst
+    val cancel : catalyst -> unit
+  end
+
   val commit : ('a, 'a) t
   val can_cas_immediate : ('a, 'b) t -> reaction -> 'c offer option -> bool
 end

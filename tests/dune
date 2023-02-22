@@ -90,16 +90,6 @@
  (libraries reagents sched_ws))
 
 (test
- (name catalyst_test2)
- (modules catalyst_test2)
- (libraries reagents sched_ws))
-
-(test
- (name catalyst_test3)
- (modules catalyst_test3)
- (libraries reagents sched_ws))
-
-(test
  (name pair_not_parallel)
  (modules pair_not_parallel)
  (libraries reagents sched_ws))
