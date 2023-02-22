@@ -16,39 +16,40 @@
 
 module Scheduler = (val Sched_ws.make ~raise_if_all_idle:true 1 ())
 module Reagents = Reagents.Make (Scheduler)
-open Scheduler
 open Reagents
 open Reagents.Channel
 
 let test1 () =
   let ep1, ep2 = mk_chan () in
   let fp1, fp2 = mk_chan () in
-  fork (fun () -> assert (run (swap fp1 >>> swap ep1) 1 == 2));
-  fork (fun () -> assert (run (swap fp2) 0 == 1));
+  Scheduler.fork (fun () -> assert (run (swap fp1 >>> swap ep1) 1 == 2));
+  Scheduler.fork (fun () -> assert (run (swap fp2) 0 == 1));
   assert (run (swap ep2) 2 == 0)
 
 let test2 () =
   let ep1, ep2 = mk_chan () in
-  fork (fun () -> assert (run (swap ep1 >>> swap ep1) 1 == 0));
-  fork (fun () -> assert (run (swap ep2) 0 == 2));
+  Scheduler.fork (fun () -> assert (run (swap ep1 >>> swap ep1) 1 == 0));
+  Scheduler.fork (fun () -> assert (run (swap ep2) 0 == 2));
   assert (run (swap ep2) 2 == 1)
 
 let test3 () =
   let ep1, ep2 = mk_chan () in
-  fork (fun () -> assert (run (swap ep1 <+> swap ep2) 0 == 1));
+  Scheduler.fork (fun () -> assert (run (swap ep1 <+> swap ep2) 0 == 1));
   assert (run (swap ep2) 1 == 0)
 
 let test4 () =
   (* Reagents are not as powerful as communicating transactions. *)
   let ep1, ep2 = mk_chan () in
-  fork (fun () -> Printf.printf "%d\n%!" (run (swap ep1 >>> swap ep1) 0));
+  Scheduler.fork (fun () ->
+      Printf.printf "%d\n%!" (run (swap ep1 >>> swap ep1) 0));
   Printf.printf "%d\n%!" (run (swap ep2 >>> swap ep2) 1)
 
 let _test5 () =
   (* This test should not succeed. *)
   let a, b = mk_chan () in
   let r = Ref.mk_ref 0 in
-  fork (fun () -> run (swap a >>> Ref.upd r (fun _ () -> Some (1, ()))) ());
+  Scheduler.fork (fun () ->
+      run (swap a >>> Ref.upd r (fun _ () -> Some (1, ()))) ());
   run (swap b >>> Ref.upd r (fun _ () -> Some (2, ()))) ()
 
 let () =

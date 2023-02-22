@@ -22,7 +22,6 @@ let () = Printf.printf "items_per_domain = %d\n%!" @@ items_per_dom
 module S = (val Sched_ws.make 4 ())
 module Reagents = Reagents.Make (S)
 open Reagents
-open Printf
 
 module Benchmark = struct
   let get_mean_sd l =
@@ -87,7 +86,6 @@ module Test (Stack : STACK) = struct
     run (CDL.await b) ()
 end
 
-module Data = Reagents.Data
 module T = Data.Treiber_stack
 
 module M1 : STACK = struct
@@ -132,17 +130,19 @@ end
 let main () =
   let module M = Test (M2) in
   let m, sd = Benchmark.benchmark (fun () -> M.run items_per_dom) 5 in
-  printf "<*>: mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m);
+  Printf.printf "<*>: mean = %f, sd = %f tp=%f\n%!" m sd
+    (float_of_int num_items /. m);
   Gc.full_major ();
 
   let module M = Test (M3) in
   let m, sd = Benchmark.benchmark (fun () -> M.run items_per_dom) 5 in
-  printf "<+>: mean = %f, sd = %f tp=%f\n%!" m sd (float_of_int num_items /. m);
+  Printf.printf "<+>: mean = %f, sd = %f tp=%f\n%!" m sd
+    (float_of_int num_items /. m);
   Gc.full_major ();
 
   let module M = Test (M1) in
   let m, sd = Benchmark.benchmark (fun () -> M.run items_per_dom) 5 in
-  printf "Non-atomic: mean = %f, sd = %f tp=%f\n%!" m sd
+  Printf.printf "Non-atomic: mean = %f, sd = %f tp=%f\n%!" m sd
     (float_of_int num_items /. m);
   Gc.full_major ();
 

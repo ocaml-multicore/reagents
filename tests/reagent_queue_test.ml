@@ -68,7 +68,6 @@ module Benchmark = struct
     get_mean_sd r
 end
 
-module Sync = Reagents.Sync
 module CDL = Sync.Countdown_latch
 
 module Test (Q : QUEUE) = struct

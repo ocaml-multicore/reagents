@@ -67,8 +67,7 @@ module Benchmark = struct
     get_mean_sd r
 end
 
-module Sync = Reagents.Sync
-module CDL = Sync.Countdown_latch
+module CDL = Reagents.Sync.Countdown_latch
 
 module Test (Q : QUEUE) = struct
   let run num_doms items_per_domain =
@@ -114,22 +113,22 @@ end) : QUEUE = struct
 end
 
 let main () =
-  let module M = Test (Lock_queue) in
+  let module M = Test (References.Lock_queue) in
   let m, sd = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
   Printf.printf "Lock_queue : mean = %f, sd = %f tp=%f\n%!" m sd
     (float_of_int num_items /. m);
 
-  let module M = Test (Two_lock_queue) in
+  let module M = Test (References.Two_lock_queue) in
   let m, sd = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
   Printf.printf "Two_lock_queue : mean = %f, sd = %f tp=%f\n%!" m sd
     (float_of_int num_items /. m);
 
-  let module M = Test (MakeQ_tx (Tx_linked_queue)) in
+  let module M = Test (MakeQ_tx (References.Tx_linked_queue)) in
   let m, sd = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
   Printf.printf "Kcas linked queue : mean = %f, sd = %f tp=%f\n%!" m sd
     (float_of_int num_items /. m);
 
-  let module M = Test (MakeQ_tx (Tx_two_stack_queue)) in
+  let module M = Test (MakeQ_tx (References.Tx_two_stack_queue)) in
   let m, sd = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
   Printf.printf "Kcas 2-stack queue : mean = %f, sd = %f tp=%f\n%!" m sd
     (float_of_int num_items /. m);

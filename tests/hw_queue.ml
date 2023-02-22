@@ -21,7 +21,6 @@ let items_per_dom = num_items / num_doms
 module S = (val Sched_ws.make num_doms ())
 module Reagents = Reagents.Make (S)
 open Reagents
-open Printf
 
 module type QUEUE = sig
   type 'a t
@@ -103,7 +102,8 @@ end
 let main () =
   let module M = Test (Lockfree.Michael_scott_queue) in
   let m, sd = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
-  printf "Hand-written Lockfree.MSQueue: mean = %f, sd = %f tp=%f\n%!" m sd
+  Printf.printf "Hand-written Lockfree.MSQueue: mean = %f, sd = %f tp=%f\n%!" m
+    sd
     (float_of_int num_items /. m)
 
 let () = S.run main

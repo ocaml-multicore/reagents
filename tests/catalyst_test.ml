@@ -1,7 +1,6 @@
 module Scheduler = (val Sched_ws.make 1 ())
 module Reagents = Reagents.Make (Scheduler)
-module R_data = Reagents.Data
-module Counter = R_data.Counter
+module Counter = Reagents.Data.Counter
 open Reagents
 
 let test1 () =

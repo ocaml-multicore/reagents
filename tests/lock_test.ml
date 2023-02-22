@@ -16,9 +16,7 @@
 
 module Scheduler = (val Sched_ws.make 1 ())
 module Reagents = Reagents.Make (Scheduler)
-open Scheduler
 open Reagents
-module Sync = Reagents.Sync
 module Lock = Sync.Lock
 module CV = Sync.Condition_variable
 
@@ -26,7 +24,7 @@ let main () =
   let l = Lock.create () in
   let cv = CV.create () in
   run (Lock.acq l) ();
-  fork (fun () ->
+  Scheduler.fork (fun () ->
       run (Lock.acq l) ();
       CV.signal cv;
       assert (run (Lock.rel l) ()));

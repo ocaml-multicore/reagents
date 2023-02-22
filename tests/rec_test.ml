@@ -3,7 +3,6 @@ let num_domains = 4
 module Scheduler = (val Sched_ws.make num_domains ())
 module Reagents = Reagents.Make (Scheduler)
 open Reagents
-module Sync = Reagents.Sync
 module RLock = Sync.Recursive_lock (Scheduler)
 module CDL = Sync.Countdown_latch
 

@@ -22,7 +22,6 @@ let () = Printf.printf "items_per_domain = %d\n%!" items_per_dom
 module S = (val Sched_ws.make num_doms ())
 module Reagents = Reagents.Make (S)
 open Reagents
-open Printf
 
 module type STACK = sig
   type 'a t
@@ -108,7 +107,7 @@ module Data = Reagents.Data
 let main () =
   let module M = Test (MakeS (Data.Elimination_stack)) in
   let m, sd = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 10 in
-  printf "Elimination stack: mean = %f, sd = %f tp=%f\n%!" m sd
+  Printf.printf "Elimination stack: mean = %f, sd = %f tp=%f\n%!" m sd
     (float_of_int num_items /. m)
 
 let () = S.run main

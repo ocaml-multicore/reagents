@@ -29,7 +29,6 @@ let () = Printf.printf "items_per_domain = %d\n%!" items_per_dom
 module S = (val Sched_ws.make num_doms ())
 module Reagents = Reagents.Make (S)
 open Reagents
-open Printf
 
 module type STACK = sig
   type 'a t
@@ -78,7 +77,6 @@ module Benchmark = struct
     get_mean_sd r
 end
 
-module Sync = Reagents.Sync
 module CDL = Sync.Countdown_latch
 
 module Test (Q : STACK) = struct
@@ -106,29 +104,26 @@ module Test (Q : STACK) = struct
     run (CDL.await b) ()
 end
 
-module Data = Reagents.Data
-
 module Channel_stack : STACK = struct
   module TS = Data.Treiber_stack
-  module C = Reagents.Channel
-  open Reagents
+  module Channel = Reagents.Channel
 
   type 'a t = {
     stack : 'a TS.t;
-    elim_push : ('a, unit) C.endpoint;
-    elim_pop : (unit, 'a) C.endpoint;
+    elim_push : ('a, unit) Channel.endpoint;
+    elim_pop : (unit, 'a) Channel.endpoint;
   }
 
   let create () =
-    let elim_push, elim_pop = C.mk_chan () in
+    let elim_push, elim_pop = Channel.mk_chan () in
     { stack = TS.create (); elim_push; elim_pop }
 
   let push q v =
-    let r = C.swap q.elim_push <+> TS.push q.stack in
+    let r = Channel.swap q.elim_push <+> TS.push q.stack in
     Reagents.run r v
 
   let pop q =
-    let side_chan = C.swap q.elim_pop >>= fun x -> constant (Some x) in
+    let side_chan = Channel.swap q.elim_pop >>= fun x -> constant (Some x) in
     let r = side_chan <+> TS.try_pop q.stack in
     Reagents.run r ()
 end
@@ -136,31 +131,31 @@ end
 let main () =
   let module M = Test (Lockfree.Michael_scott_queue) in
   let m, sd = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
-  printf "Hand-written Treiber Stack: mean = %f, sd = %f tp=%f\n%!" m sd
+  Printf.printf "Hand-written Treiber Stack: mean = %f, sd = %f tp=%f\n%!" m sd
     (float_of_int num_items /. m);
 
   Gc.full_major ();
   let module M = Test (MakeS (Data.Treiber_stack)) in
   let m, sd = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
-  printf "Treiber stack: mean = %f, sd = %f tp=%f\n%!" m sd
+  Printf.printf "Treiber stack: mean = %f, sd = %f tp=%f\n%!" m sd
     (float_of_int num_items /. m);
 
   Gc.full_major ();
-  let module M = Test (Lock_stack) in
+  let module M = Test (References.Lock_stack) in
   let m, sd = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
-  printf "Lock stack: mean = %f, sd = %f tp=%f\n%!" m sd
+  Printf.printf "Lock stack: mean = %f, sd = %f tp=%f\n%!" m sd
     (float_of_int num_items /. m);
 
   Gc.full_major ();
   let module M = Test (MakeS (Data.Elimination_stack)) in
   let m, sd = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
-  printf "Elimination stack: mean = %f, sd = %f tp=%f\n%!" m sd
+  Printf.printf "Elimination stack: mean = %f, sd = %f tp=%f\n%!" m sd
     (float_of_int num_items /. m);
 
   Gc.full_major ();
   let module M = Test (Channel_stack) in
   let m, sd = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
-  printf "Channel-based stack: mean = %f, sd = %f tp=%f\n%!" m sd
+  Printf.printf "Channel-based stack: mean = %f, sd = %f tp=%f\n%!" m sd
     (float_of_int num_items /. m)
 
 let () = S.run main
