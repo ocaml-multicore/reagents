@@ -19,7 +19,7 @@ let num_philosophers = 3
 let num_rounds = 10_000
 
 module S =
-  (val Sched_ws.make 1 () (* todo: increase once kcas is auto-sorting entries *))
+  (val Sched_ws.make 3 ())
 
 module Reagents = Reagents.Make (S)
 open Reagents
