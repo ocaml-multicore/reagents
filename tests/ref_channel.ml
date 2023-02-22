@@ -28,14 +28,15 @@ end
 
 module Scheduler = (val Sched_ws.make 1 ())
 module Reagents = Reagents.Make (Scheduler)
-open Scheduler
 open Reagents
 module Channel = Ref_channel (Reagents)
-open Channel
 
-let main () =
-  let c = mk_chan () in
-  fork (fun () -> Printf.printf "%d\n" (run (recv c) ()));
-  run (send c) 10
+let test1 () =
+  Scheduler.run (fun () ->
+      let c = Channel.mk_chan () in
+      Scheduler.fork (fun () -> Printf.printf "%d\n" (run (Channel.recv c) ()));
+      run (Channel.send c) 10)
 
-let () = Scheduler.run main
+let () =
+  let open Alcotest in
+  run "ref channel" [ ("simple", [ test_case "test 1" `Quick test1 ]) ]

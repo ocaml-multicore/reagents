@@ -22,9 +22,10 @@ let work sw v () =
   Printf.printf "%d" x
 
 let two_way () =
-  let sw1, sw2 = mk_tw_chan () in
-  Scheduler.fork (work sw1 1);
-  work sw2 2 ()
+  Scheduler.run_allow_deadlock (fun () ->
+      let sw1, sw2 = mk_tw_chan () in
+      Scheduler.fork (work sw1 1);
+      work sw2 2 ())
 
 (* Test 2 *)
 let mk_tw_chan () =
@@ -40,11 +41,19 @@ let work sw v () =
   Printf.printf "%d %d" x y
 
 let three_way () =
-  let sw1, sw2, sw3 = mk_tw_chan () in
-  Scheduler.fork (work sw1 1);
-  Scheduler.fork (work sw2 2);
-  work sw3 3 ()
+  Scheduler.run_allow_deadlock (fun () ->
+      let sw1, sw2, sw3 = mk_tw_chan () in
+      Scheduler.fork (work sw1 1);
+      Scheduler.fork (work sw2 2);
+      work sw3 3 ())
 
-let _ =
-  Scheduler.run_allow_deadlock two_way;
-  Scheduler.run_allow_deadlock three_way
+let () =
+  let open Alcotest in
+  run "paired composition not parallel"
+    [
+      ( "simple",
+        [
+          test_case "two-way swap" `Quick two_way;
+          test_case "three-way swap" `Quick three_way;
+        ] );
+    ]

@@ -14,22 +14,43 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-open Printf
 module Scheduler = (val Sched_ws.make ~raise_if_all_idle:true 1 ())
 module Reagents = Reagents.Make (Scheduler)
-module R_data = Reagents.Data
-module Counter = R_data.Counter
 open Reagents
+module Counter = Data.Counter
 
-let main () =
-  (* Test 1 *)
-  printf "**** Test 1 ****\n%!";
-  let c = Counter.create 0 in
-  assert (run (Counter.get c) () == 0);
-  assert (run (Counter.inc c) () == 0);
-  assert (run (Counter.inc c) () == 1);
-  assert (run (Counter.dec c) () == 2);
-  assert (run (Counter.get c) () == 1);
-  ()
+let test1 () =
+  Scheduler.run (fun () ->
+      let c = Counter.create 0 in
+      assert (run (Counter.get c) () == 0);
+      assert (run (Counter.inc c) () == 0);
+      assert (run (Counter.inc c) () == 1);
+      assert (run (Counter.dec c) () == 2);
+      assert (run (Counter.get c) () == 1))
 
-let () = Scheduler.run_allow_deadlock main
+let test2 () =
+  Scheduler.run_allow_deadlock (fun () ->
+      let c = Counter.create 0 in
+      assert (run (Counter.inc c) () == 0);
+      run
+        ( Counter.try_dec c >>= fun ov ->
+          match ov with
+          | Some 1 ->
+              Printf.printf
+                "Counter is 0. Further decrement blocks the thread!\n%!";
+              constant ()
+          | _ -> failwith "impossible" )
+        ();
+      run (Counter.dec c) () |> ignore;
+      ())
+
+let () =
+  let open Alcotest in
+  run "counter test"
+    [
+      ( "simple",
+        [
+          test_case "get, inc, dec" `Quick test1;
+          test_case "blocking" `Quick test2;
+        ] );
+    ]

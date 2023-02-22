@@ -22,16 +22,19 @@ let rec join acc = function
 
 let join l = join [] l
 
-let main () =
-  let r =
-    join (make [] n) >>= fun l ->
-    (* instead of l = answer, assume `eval_formula l formula` where
-       eval_formula : input:bool list -> formula -> bool *)
-    if l = answer then (
-      Printf.printf "SAT\n%!";
-      constant ())
-    else never
-  in
-  run r ()
+let test1 () =
+  Scheduler.run (fun () ->
+      let r =
+        join (make [] n) >>= fun l ->
+        (* instead of l = answer, assume `eval_formula l formula` where
+           eval_formula : input:bool list -> formula -> bool *)
+        if l = answer then (
+          Printf.printf "SAT\n%!";
+          constant ())
+        else never
+      in
+      run r ())
 
-let () = Scheduler.run main
+let () =
+  let open Alcotest in
+  run "sat test" [ ("simple", [ test_case "test 1" `Quick test1 ]) ]

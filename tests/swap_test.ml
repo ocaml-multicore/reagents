@@ -20,40 +20,55 @@ open Reagents
 open Reagents.Channel
 
 let test1 () =
-  let ep1, ep2 = mk_chan () in
-  let fp1, fp2 = mk_chan () in
-  Scheduler.fork (fun () -> assert (run (swap fp1 >>> swap ep1) 1 == 2));
-  Scheduler.fork (fun () -> assert (run (swap fp2) 0 == 1));
-  assert (run (swap ep2) 2 == 0)
+  Scheduler.run (fun () ->
+      let ep1, ep2 = mk_chan () in
+      let fp1, fp2 = mk_chan () in
+      Scheduler.fork (fun () -> assert (run (swap fp1 >>> swap ep1) 1 == 2));
+      Scheduler.fork (fun () -> assert (run (swap fp2) 0 == 1));
+      assert (run (swap ep2) 2 == 0))
 
 let test2 () =
-  let ep1, ep2 = mk_chan () in
-  Scheduler.fork (fun () -> assert (run (swap ep1 >>> swap ep1) 1 == 0));
-  Scheduler.fork (fun () -> assert (run (swap ep2) 0 == 2));
-  assert (run (swap ep2) 2 == 1)
+  Scheduler.run (fun () ->
+      let ep1, ep2 = mk_chan () in
+      Scheduler.fork (fun () -> assert (run (swap ep1 >>> swap ep1) 1 == 0));
+      Scheduler.fork (fun () -> assert (run (swap ep2) 0 == 2));
+      assert (run (swap ep2) 2 == 1))
 
 let test3 () =
-  let ep1, ep2 = mk_chan () in
-  Scheduler.fork (fun () -> assert (run (swap ep1 <+> swap ep2) 0 == 1));
-  assert (run (swap ep2) 1 == 0)
+  Scheduler.run (fun () ->
+      let ep1, ep2 = mk_chan () in
+      Scheduler.fork (fun () -> assert (run (swap ep1 <+> swap ep2) 0 == 1));
+      assert (run (swap ep2) 1 == 0))
 
 let test4 () =
   (* Reagents are not as powerful as communicating transactions. *)
-  let ep1, ep2 = mk_chan () in
-  Scheduler.fork (fun () ->
-      Printf.printf "%d\n%!" (run (swap ep1 >>> swap ep1) 0));
-  Printf.printf "%d\n%!" (run (swap ep2 >>> swap ep2) 1)
+  Scheduler.run_allow_deadlock (fun () ->
+      let ep1, ep2 = mk_chan () in
+      Scheduler.fork (fun () ->
+          Printf.printf "%d\n%!" (run (swap ep1 >>> swap ep1) 0));
+      Printf.printf "%d\n%!" (run (swap ep2 >>> swap ep2) 1))
 
-let _test5 () =
-  (* This test should not succeed. *)
-  let a, b = mk_chan () in
-  let r = Ref.mk_ref 0 in
-  Scheduler.fork (fun () ->
-      run (swap a >>> Ref.upd r (fun _ () -> Some (1, ()))) ());
-  run (swap b >>> Ref.upd r (fun _ () -> Some (2, ()))) ()
+let test5 () =
+  (* This test should not succeed; expecting kcas failure *)
+  Scheduler.run_allow_deadlock (fun () ->
+      let a, b = mk_chan () in
+      let r = Ref.mk_ref 0 in
+      Scheduler.fork (fun () ->
+          run (swap a >>> Ref.upd r (fun _ () -> Some (1, ()))) ());
+      match run (swap b >>> Ref.upd r (fun _ () -> Some (2, ()))) () with
+      | exception _ -> ()
+      | _ -> assert false)
 
 let () =
-  Scheduler.run test1;
-  Scheduler.run test2;
-  Scheduler.run test3;
-  match Scheduler.run test4 with exception _ -> () | _ -> assert false
+  let open Alcotest in
+  run "channel test"
+    [
+      ( "simple",
+        [
+          test_case "two channels connected" `Quick test1;
+          test_case "one channel, pass item back" `Quick test2;
+          test_case "channel with choice" `Quick test3;
+          test_case "overlapping locations; blocking" `Quick test4;
+          test_case "overlapping locations; failing" `Quick test5;
+        ] );
+    ]

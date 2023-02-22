@@ -19,21 +19,26 @@ module Reagents = Reagents.Make (Scheduler)
 open Reagents
 
 let test1 () =
-  (* Test 1 *)
-  let r = Ref.mk_ref 0 in
-  let foo ov () = if ov = 0 then None else Some (2, ()) in
-  Scheduler.fork (fun () -> run (Ref.upd r foo) ());
-  run (Ref.cas r 0 1) ()
+  Scheduler.run (fun () ->
+      let r = Ref.mk_ref 0 in
+      let foo ov () = if ov = 0 then None else Some (2, ()) in
+      Scheduler.fork (fun () -> run (Ref.upd r foo) ());
+      run (Ref.cas r 0 1) ())
 
 let test2 () =
-  (* Test 2 *)
-  let r = Ref.mk_ref 2 in
-  let test2_rg =
-    Ref.read r >>= fun i -> if i <> 3 then never else constant ()
-  in
-  Scheduler.fork (run test2_rg);
-  run (Ref.cas r 2 3) ()
+  Scheduler.run (fun () ->
+      let r = Ref.mk_ref 2 in
+      let test2_rg =
+        Ref.read r >>= fun i -> if i <> 3 then never else constant ()
+      in
+      Scheduler.fork (run test2_rg);
+      run (Ref.cas r 2 3) ())
 
 let () =
-  Scheduler.run test1;
-  Scheduler.run test2
+  let open Alcotest in
+  run "ref test"
+    [
+      ( "simple",
+        [ test_case "upd" `Quick test1; test_case "monadic upd" `Quick test2 ]
+      );
+    ]

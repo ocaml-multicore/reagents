@@ -20,15 +20,18 @@ open Reagents
 module Lock = Sync.Lock
 module CV = Sync.Condition_variable
 
-let main () =
-  let l = Lock.create () in
-  let cv = CV.create () in
-  run (Lock.acq l) ();
-  Scheduler.fork (fun () ->
+let test () =
+  Scheduler.run (fun () ->
+      let l = Lock.create () in
+      let cv = CV.create () in
       run (Lock.acq l) ();
-      CV.signal cv;
-      assert (run (Lock.rel l) ()));
-  assert (CV.wait l cv);
-  assert (run (Lock.rel l) ())
+      Scheduler.fork (fun () ->
+          run (Lock.acq l) ();
+          CV.signal cv;
+          assert (run (Lock.rel l) ()));
+      assert (CV.wait l cv);
+      assert (run (Lock.rel l) ()))
 
-let () = Scheduler.run main
+let () =
+  let open Alcotest in
+  run "lock test" [ ("simple", [ test_case "lock and cond-var" `Quick test ]) ]

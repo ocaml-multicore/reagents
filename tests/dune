@@ -6,12 +6,7 @@
 (test
  (name counter_test)
  (modules counter_test)
- (libraries reagents sched_ws))
-
-(test
- (name counter_test_blocking)
- (modules counter_test_blocking)
- (libraries reagents sched_ws))
+ (libraries reagents sched_ws alcotest))
 
 (test
  (name dining_philosophers)
@@ -26,17 +21,17 @@
 (test
  (name lock_test)
  (modules lock_test)
- (libraries reagents sched_ws))
+ (libraries reagents sched_ws alcotest))
 
 (test
  (name ref_channel)
  (modules ref_channel)
- (libraries reagents sched_ws))
+ (libraries reagents sched_ws alcotest))
 
 (test
  (name ref_test)
  (modules ref_test)
- (libraries reagents sched_ws))
+ (libraries reagents sched_ws alcotest))
 
 (test
  (name queue_test)
@@ -51,12 +46,12 @@
 (test
  (name sat)
  (modules sat)
- (libraries reagents sched_ws))
+ (libraries reagents sched_ws alcotest))
 
 (test
  (name rec_test)
  (modules rec_test)
- (libraries reagents sched_ws))
+ (libraries reagents sched_ws alcotest))
 
 (test
  (name stack_test)
@@ -71,7 +66,7 @@
 (test
  (name swap_test)
  (modules swap_test)
- (libraries reagents sched_ws))
+ (libraries reagents sched_ws alcotest))
 
 (test
  (name hw_queue)
@@ -81,9 +76,9 @@
 (test
  (name catalyst_test)
  (modules catalyst_test)
- (libraries reagents sched_ws))
+ (libraries reagents sched_ws alcotest))
 
 (test
  (name pair_not_parallel)
  (modules pair_not_parallel)
- (libraries reagents sched_ws))
+ (libraries reagents sched_ws alcotest))

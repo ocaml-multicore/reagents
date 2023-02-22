@@ -144,4 +144,4 @@ let main () =
     sd
     (float_of_int num_items /. m)
 
-let () = S.run_allow_deadlock main
+let () = S.run main

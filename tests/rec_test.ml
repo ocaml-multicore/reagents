@@ -11,36 +11,39 @@ let rec lock_and_call l i =
   if i > 0 then lock_and_call l (i - 1);
   assert (run (RLock.rel l) ())
 
-let main () =
-  let l = RLock.create () in
+let test1 () =
+  Scheduler.run (fun () ->
+      let l = RLock.create () in
 
-  Scheduler.fork (fun () ->
-      run (RLock.acq l) ();
-      lock_and_call l 1;
-      ignore (run (RLock.rel l) ()));
+      Scheduler.fork (fun () ->
+          run (RLock.acq l) ();
+          lock_and_call l 1;
+          ignore (run (RLock.rel l) ()));
 
-  let cdl = CDL.create (100 + (100 * 2)) in
-  (* ... *)
-  for _ = 0 to 99 do
-    Scheduler.fork (fun () ->
-        lock_and_call l 100;
-        run (CDL.count_down cdl) ())
-  done;
-  (* ... *)
-  for _ = 0 to 99 do
-    Scheduler.fork (fun () ->
-        run (RLock.acq l) ();
-        assert (run (RLock.try_acq l) ());
-        assert (run (RLock.rel l) ());
-        assert (run (RLock.rel l) ());
-        run (CDL.count_down cdl) ());
-    Scheduler.fork (fun () ->
-        if run (RLock.try_acq l) () then (
-          lock_and_call l 100;
-          assert (run (RLock.rel l) ()));
-        run (CDL.count_down cdl) ())
-  done;
+      let cdl = CDL.create (100 + (100 * 2)) in
+      (* ... *)
+      for _ = 0 to 99 do
+        Scheduler.fork (fun () ->
+            lock_and_call l 100;
+            run (CDL.count_down cdl) ())
+      done;
+      (* ... *)
+      for _ = 0 to 99 do
+        Scheduler.fork (fun () ->
+            run (RLock.acq l) ();
+            assert (run (RLock.try_acq l) ());
+            assert (run (RLock.rel l) ());
+            assert (run (RLock.rel l) ());
+            run (CDL.count_down cdl) ());
+        Scheduler.fork (fun () ->
+            if run (RLock.try_acq l) () then (
+              lock_and_call l 100;
+              assert (run (RLock.rel l) ()));
+            run (CDL.count_down cdl) ())
+      done;
+      run (CDL.await cdl) ())
 
-  run (CDL.await cdl) ()
-
-let () = Scheduler.run main
+let () =
+  let open Alcotest in
+  run "recursive lock test"
+    [ ("simple", [ test_case "4-domain" `Quick test1 ]) ]
