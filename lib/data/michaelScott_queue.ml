@@ -14,15 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-module type S = sig
-  type 'a t
-  type ('a, 'b) reagent
-
-  val create : unit -> 'a t
-  val push : 'a t -> ('a, unit) reagent
-  val pop : 'a t -> (unit, 'a) reagent
-  val try_pop : 'a t -> (unit, 'a option) reagent
-end
+module type S = MichaelScott_queue_intf.S
 
 module Make (Base : Base.S) : S with type ('a, 'b) reagent = ('a, 'b) Base.t =
 struct

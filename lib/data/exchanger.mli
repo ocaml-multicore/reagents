@@ -1,9 +1,6 @@
-module type S = sig
-  type 'a t
-  type ('a, 'b) reagent
+(* A two-way exchanger. Unlike channels, exchanger does not distinguish between
+ * the two channel endpoints. *)
 
-  val create : ?name:string -> unit -> 'a t
-  val exchange : 'a t -> ('a, 'a) reagent
-end
+module type S = Exchanger_intf.S
 
 module Make (Base : Base.S) : S with type ('a, 'b) reagent = ('a, 'b) Base.t

@@ -14,15 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-module type S = sig
-  type t
-  type ('a, 'b) reagent
+module type S = Counter_intf.S
 
-  val create : int -> t
-  val get : t -> (unit, int) reagent
-  val inc : t -> (unit, int) reagent
-  val dec : t -> (unit, int) reagent
-  val try_dec : t -> (unit, int option) reagent
-end
-
-module Make (Base : Base.S) : S with type ('a, 'b) reagent = ('a, 'b) Base.t
+module Make (Base : Base.S) :
+  Counter_intf.S with type ('a, 'b) reagent = ('a, 'b) Base.t

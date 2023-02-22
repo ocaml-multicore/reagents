@@ -1,12 +1,4 @@
-module type S = sig
-  type ('a, 'b) reagent
-  type t
-
-  val create : unit -> t
-  val acq : t -> (unit, unit) reagent
-  val try_acq : t -> (unit, bool) reagent
-  val rel : t -> (unit, bool) reagent
-end
+module type S = Recursive_lock_intf.S
 
 module Make
     (Base : Base.S) (Tid : sig

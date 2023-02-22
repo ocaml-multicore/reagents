@@ -15,10 +15,4 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-module type S = sig
-  type 'a cont
-
-  val suspend : ('a cont -> 'a option) -> 'a
-  val resume : 'a cont -> 'a -> unit
-  val get_tid : unit -> int
-end
+module type S = Scheduler_intf.S
