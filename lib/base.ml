@@ -14,35 +14,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-module type Scheduler = sig
-  type 'a cont
+module type S = Base_intf.S
 
-  val suspend : ('a cont -> 'a option) -> 'a
-  val resume : 'a cont -> 'a -> unit
-  val get_tid : unit -> int
-end
-
-module type S = sig
-  type ('a, 'b) t
-
-  val never : ('a, 'b) t
-  val constant : 'a -> ('b, 'a) t
-  val post_commit : ('a -> unit) -> ('a, 'a) t
-  val lift : ('a -> 'b) -> ('a, 'b) t
-  val lift_blocking : ('a -> 'b option) -> ('a, 'b) t
-  val return : ('a -> (unit, 'b) t) -> ('a, 'b) t
-  val ( >>= ) : ('a, 'b) t -> ('b -> (unit, 'c) t) -> ('a, 'c) t
-  val ( >>> ) : ('a, 'b) t -> ('b, 'c) t -> ('a, 'c) t
-  val ( <+> ) : ('a, 'b) t -> ('a, 'b) t -> ('a, 'b) t
-  val ( <*> ) : ('a, 'b) t -> ('a, 'c) t -> ('a, 'b * 'c) t
-  val attempt : ('a, 'b) t -> ('a, 'b option) t
-  val run : ('a, 'b) t -> 'a -> 'b
-
-  module Ref : Ref.S with type ('a, 'b) reagent = ('a, 'b) t
-  module Channel : Channel.S with type ('a, 'b) reagent = ('a, 'b) t
-end
-
-module Make (Sched : Scheduler) : S = struct
+module Make (Sched : Scheduler.S) : S = struct
   include Core.Make (Sched)
   module Ref = Ref.Make (Sched)
   module Channel = Channel.Make (Sched)

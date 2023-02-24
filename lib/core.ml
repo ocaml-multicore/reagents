@@ -15,35 +15,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-module type S = sig
-  type reaction
-  type 'a offer
-  type catalyst
-  type 'a result = BlockAndRetry | Block | Retry | Done of 'a
-
-  type ('a, 'b) t = {
-    try_react : 'a -> reaction -> 'b offer option -> 'b result;
-    compose : 'r. ('b, 'r) t -> ('a, 'r) t;
-    always_commits : bool;
-  }
-
-  val never : ('a, 'b) t
-  val constant : 'a -> ('b, 'a) t
-  val post_commit : ('a -> unit) -> ('a, 'a) t
-  val lift : ('a -> 'b) -> ('a, 'b) t
-  val lift_blocking : ('a -> 'b option) -> ('a, 'b) t
-  val return : ('a -> (unit, 'b) t) -> ('a, 'b) t
-  val ( >>= ) : ('a, 'b) t -> ('b -> (unit, 'c) t) -> ('a, 'c) t
-  val ( >>> ) : ('a, 'b) t -> ('b, 'c) t -> ('a, 'c) t
-  val ( <+> ) : ('a, 'b) t -> ('a, 'b) t -> ('a, 'b) t
-  val ( <*> ) : ('a, 'b) t -> ('a, 'c) t -> ('a, 'b * 'c) t
-  val attempt : ('a, 'b) t -> ('a, 'b option) t
-  val run : ('a, 'b) t -> 'a -> 'b
-  val catalyse : ('a, 'b) t -> 'a -> catalyst
-  val cancel_catalyst : catalyst -> unit
-  val commit : ('a, 'a) t
-  val can_cas_immediate : ('a, 'b) t -> reaction -> 'c offer option -> bool
-end
+module type S = Core_intf.S
 
 module Make (Sched : Scheduler.S) :
   S
@@ -54,7 +26,6 @@ module Make (Sched : Scheduler.S) :
 
   type reaction = Reaction.t
   type 'a offer = 'a Offer.t
-  type catalyst = Offer.catalyst
   type 'a result = BlockAndRetry | Block | Retry | Done of 'a
 
   type ('a, 'b) t = {
@@ -218,13 +189,16 @@ module Make (Sched : Scheduler.S) :
     let pause () = Lockfree.Backoff.once b in
     without_offer pause r v
 
-  let catalyse r v =
-    let offer, catalyst = Offer.make_catalyst () in
-    match r.try_react v Reaction.empty (Some offer) with
-    | Done _ | Retry -> assert false
-    | Block | BlockAndRetry -> catalyst
+  module Catalyst = struct
+    type t = Offer.catalyst
 
-  let cancel_catalyst = Offer.cancel_catalyst
+    let catalyse r v =
+      let offer, catalyst = Offer.make_catalyst () in
+      match r.try_react v Reaction.empty (Some offer) with
+      | Done _ | Retry | Block | BlockAndRetry -> catalyst
+
+    let cancel = Offer.cancel_catalyst
+  end
 
   let can_cas_immediate k rx = function
     | Some _ -> false

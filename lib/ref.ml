@@ -15,22 +15,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-module type S = sig
-  type 'a ref
-  type ('a, 'b) reagent
-
-  val mk_ref : 'a -> 'a ref
-  val read : 'a ref -> (unit, 'a) reagent
-  val read_imm : 'a ref -> 'a
-  val cas : ?never_block:bool -> 'a ref -> 'a -> 'a -> (unit, unit) reagent
-  val cas_imm : 'a ref -> 'a -> 'a -> bool
-
-  val upd :
-    ?never_block:bool ->
-    'a ref ->
-    ('a -> 'b -> ('a * 'c) option) ->
-    ('b, 'c) reagent
-end
+module type S = Ref_intf.S
 
 module Make (Sched : Scheduler.S) :
   S with type ('a, 'b) reagent = ('a, 'b) Core.Make(Sched).t = struct

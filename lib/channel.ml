@@ -15,13 +15,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-module type S = sig
-  type ('a, 'b) endpoint
-  type ('a, 'b) reagent
-
-  val mk_chan : ?name:string -> unit -> ('a, 'b) endpoint * ('b, 'a) endpoint
-  val swap : ('a, 'b) endpoint -> ('a, 'b) reagent
-end
+module type S = Channel_intf.S
 
 module Make (Sched : Scheduler.S) :
   S with type ('a, 'b) reagent = ('a, 'b) Core.Make(Sched).t = struct

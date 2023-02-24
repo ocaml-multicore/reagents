@@ -14,70 +14,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-module type Scheduler = sig
-  type 'a cont
+module type S = Reagents_intf.S
 
-  val suspend : ('a cont -> 'a option) -> 'a
-  val resume : 'a cont -> 'a -> unit
-  val get_tid : unit -> int
-end
-
-module type S = sig
-  type ('a, 'b) t
-
-  val never : ('a, 'b) t
-  val constant : 'a -> ('b, 'a) t
-  val post_commit : ('a -> unit) -> ('a, 'a) t
-  val lift : ('a -> 'b) -> ('a, 'b) t
-  val lift_blocking : ('a -> 'b option) -> ('a, 'b) t
-  val return : ('a -> (unit, 'b) t) -> ('a, 'b) t
-  val ( >>= ) : ('a, 'b) t -> ('b -> (unit, 'c) t) -> ('a, 'c) t
-  val ( >>> ) : ('a, 'b) t -> ('b, 'c) t -> ('a, 'c) t
-  val ( <+> ) : ('a, 'b) t -> ('a, 'b) t -> ('a, 'b) t
-  val ( <*> ) : ('a, 'b) t -> ('a, 'c) t -> ('a, 'b * 'c) t
-  val attempt : ('a, 'b) t -> ('a, 'b option) t
-  val run : ('a, 'b) t -> 'a -> 'b
-
-  type catalyst
-
-  val catalyse : ('a, 'b) t -> 'a -> catalyst
-  val cancel_catalyst : catalyst -> unit
-
-  module Ref : Ref.S with type ('a, 'b) reagent = ('a, 'b) t
-  module Channel : Channel.S with type ('a, 'b) reagent = ('a, 'b) t
-
-  module Data : sig
-    module Counter : Counter.S with type ('a, 'b) reagent = ('a, 'b) t
-
-    module Treiber_stack :
-      Treiber_stack.S with type ('a, 'b) reagent = ('a, 'b) t
-
-    module Elimination_stack :
-      Elimination_stack.S with type ('a, 'b) reagent = ('a, 'b) t
-
-    module MichaelScott_queue :
-      MichaelScott_queue.S with type ('a, 'b) reagent = ('a, 'b) t
-  end
-
-  module Sync : sig
-    module Countdown_latch :
-      Countdown_latch.S with type ('a, 'b) reagent = ('a, 'b) t
-
-    module Exchanger : Exchanger.S with type ('a, 'b) reagent = ('a, 'b) t
-    module Lock : Lock.S with type ('a, 'b) reagent = ('a, 'b) t
-
-    module Recursive_lock (Tid : sig
-      val get_tid : unit -> int
-    end) : Recursive_lock.S with type ('a, 'b) reagent = ('a, 'b) t
-
-    module Condition_variable :
-      Condition_variable.S
-        with type ('a, 'b) reagent = ('a, 'b) t
-         and type lock = Lock.t
-  end
-end
-
-module Make (Sched : Scheduler) : S = struct
+module Make (Sched : Scheduler.S) : S = struct
   module B = struct
     include Core.Make (Sched)
     module Ref = Ref.Make (Sched)

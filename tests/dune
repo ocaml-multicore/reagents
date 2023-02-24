@@ -1,0 +1,84 @@
+(library
+ (name sched_ws)
+ (modules sched_ws)
+ (libraries lockfree unix))
+
+(test
+ (name counter_test)
+ (modules counter_test)
+ (libraries reagents sched_ws alcotest))
+
+(test
+ (name dining_philosophers)
+ (modules dining_philosophers)
+ (libraries reagents sched_ws))
+
+(test
+ (name eli_stack)
+ (modules eli_stack)
+ (libraries reagents sched_ws))
+
+(test
+ (name lock_test)
+ (modules lock_test)
+ (libraries reagents sched_ws alcotest))
+
+(test
+ (name ref_channel)
+ (modules ref_channel)
+ (libraries reagents sched_ws alcotest))
+
+(test
+ (name ref_test)
+ (modules ref_test)
+ (libraries reagents sched_ws alcotest))
+
+(test
+ (name queue_test)
+ (modules queue_test)
+ (libraries reagents sched_ws references))
+
+(test
+ (name reagent_queue_test)
+ (modules reagent_queue_test)
+ (libraries reagents sched_ws))
+
+(test
+ (name sat)
+ (modules sat)
+ (libraries reagents sched_ws alcotest))
+
+(test
+ (name rec_test)
+ (modules rec_test)
+ (libraries reagents sched_ws alcotest))
+
+(test
+ (name stack_test)
+ (modules stack_test)
+ (libraries reagents sched_ws references))
+
+(test
+ (name stack_test_compose)
+ (modules stack_test_compose)
+ (libraries reagents sched_ws))
+
+(test
+ (name swap_test)
+ (modules swap_test)
+ (libraries reagents sched_ws alcotest))
+
+(test
+ (name hw_queue)
+ (modules hw_queue)
+ (libraries reagents sched_ws))
+
+(test
+ (name catalyst_test)
+ (modules catalyst_test)
+ (libraries reagents sched_ws alcotest))
+
+(test
+ (name pair_not_parallel)
+ (modules pair_not_parallel)
+ (libraries reagents sched_ws alcotest))
