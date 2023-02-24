@@ -19,7 +19,7 @@ module Reagents = Reagents.Make (Scheduler)
 open Reagents
 open Reagents.Channel
 
-let test1 () =
+let two_chan_passthrough () =
   Scheduler.run (fun () ->
       let ep1, ep2 = mk_chan () in
       let fp1, fp2 = mk_chan () in
@@ -27,20 +27,20 @@ let test1 () =
       Scheduler.fork (fun () -> assert (run (swap fp2) 0 == 1));
       assert (run (swap ep2) 2 == 0))
 
-let test2 () =
+let one_chan_loopback () =
   Scheduler.run (fun () ->
       let ep1, ep2 = mk_chan () in
       Scheduler.fork (fun () -> assert (run (swap ep1 >>> swap ep1) 1 == 0));
       Scheduler.fork (fun () -> assert (run (swap ep2) 0 == 2));
       assert (run (swap ep2) 2 == 1))
 
-let test3 () =
+let chan_with_choice () =
   Scheduler.run (fun () ->
       let ep1, ep2 = mk_chan () in
       Scheduler.fork (fun () -> assert (run (swap ep1 <+> swap ep2) 0 == 1));
       assert (run (swap ep2) 1 == 0))
 
-let test4 () =
+let chan_swap_on_overlapping_locs () =
   (* Reagents are not as powerful as communicating transactions. *)
   Scheduler.run_allow_deadlock (fun () ->
       let ep1, ep2 = mk_chan () in
@@ -48,7 +48,7 @@ let test4 () =
           Printf.printf "%d\n%!" (run (swap ep1 >>> swap ep1) 0));
       Printf.printf "%d\n%!" (run (swap ep2 >>> swap ep2) 1))
 
-let test5 () =
+let ref_upd_on_overlapping_locs () =
   (* This test should not succeed; expecting kcas failure *)
   Scheduler.run_allow_deadlock (fun () ->
       let a, b = mk_chan () in
@@ -65,10 +65,12 @@ let () =
     [
       ( "simple",
         [
-          test_case "two channels connected" `Quick test1;
-          test_case "one channel, pass item back" `Quick test2;
-          test_case "channel with choice" `Quick test3;
-          test_case "overlapping locations; blocking" `Quick test4;
-          test_case "overlapping locations; failing" `Quick test5;
+          test_case "two channels connected" `Quick two_chan_passthrough;
+          test_case "one channel, pass item back" `Quick one_chan_loopback;
+          test_case "channel with choice" `Quick chan_with_choice;
+          test_case "overlapping locations; blocking" `Quick
+            chan_swap_on_overlapping_locs;
+          test_case "overlapping locations; failing" `Quick
+            ref_upd_on_overlapping_locs;
         ] );
     ]

@@ -50,6 +50,7 @@ module type S = sig
 
   module Catalyst : sig
     type ('a, 'b) reagent := ('a, 'b) t
+
     type t
     (** Type providing a handle for passively invoked reagent. Such a reagent 
       remains active and available to react with other reagents until cancelled. *)

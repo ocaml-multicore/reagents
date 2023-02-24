@@ -31,7 +31,7 @@ module Reagents = Reagents.Make (Scheduler)
 open Reagents
 module Channel = Ref_channel (Reagents)
 
-let test1 () =
+let chan_send_receive () =
   Scheduler.run (fun () ->
       let c = Channel.mk_chan () in
       Scheduler.fork (fun () -> Printf.printf "%d\n" (run (Channel.recv c) ()));
@@ -39,4 +39,5 @@ let test1 () =
 
 let () =
   let open Alcotest in
-  run "ref channel" [ ("simple", [ test_case "test 1" `Quick test1 ]) ]
+  run "ref channel"
+    [ ("simple", [ test_case "send receive" `Quick chan_send_receive ]) ]

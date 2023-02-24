@@ -19,7 +19,7 @@ module Reagents = Reagents.Make (Scheduler)
 open Reagents
 module Counter = Data.Counter
 
-let test1 () =
+let counter () =
   Scheduler.run (fun () ->
       let c = Counter.create 0 in
       assert (run (Counter.get c) () == 0);
@@ -28,7 +28,7 @@ let test1 () =
       assert (run (Counter.dec c) () == 2);
       assert (run (Counter.get c) () == 1))
 
-let test2 () =
+let counter_await_value () =
   Scheduler.run_allow_deadlock (fun () ->
       let c = Counter.create 0 in
       assert (run (Counter.inc c) () == 0);
@@ -50,7 +50,7 @@ let () =
     [
       ( "simple",
         [
-          test_case "get, inc, dec" `Quick test1;
-          test_case "blocking" `Quick test2;
+          test_case "get, inc, dec" `Quick counter;
+          test_case "blocking" `Quick counter_await_value;
         ] );
     ]

@@ -18,14 +18,14 @@ module Scheduler = (val Sched_ws.make 1 ())
 module Reagents = Reagents.Make (Scheduler)
 open Reagents
 
-let test1 () =
+let update () =
   Scheduler.run (fun () ->
       let r = Ref.mk_ref 0 in
       let foo ov () = if ov = 0 then None else Some (2, ()) in
       Scheduler.fork (fun () -> run (Ref.upd r foo) ());
       run (Ref.cas r 0 1) ())
 
-let test2 () =
+let update_monadic () =
   Scheduler.run (fun () ->
       let r = Ref.mk_ref 2 in
       let test2_rg =
@@ -39,6 +39,8 @@ let () =
   run "ref test"
     [
       ( "simple",
-        [ test_case "upd" `Quick test1; test_case "monadic upd" `Quick test2 ]
-      );
+        [
+          test_case "upd" `Quick update;
+          test_case "monadic upd" `Quick update_monadic;
+        ] );
     ]

@@ -3,7 +3,7 @@ module Reagents = Reagents.Make (Scheduler)
 module Counter = Reagents.Data.Counter
 open Reagents
 
-let test1 () =
+let message_counter () =
   Scheduler.run (fun () ->
       let receiver_counter = Atomic.make 0 in
       let assert_counter v = assert (Atomic.get receiver_counter == v) in
@@ -22,7 +22,7 @@ let test1 () =
       Reagents.run (Channel.swap c1) ();
       assert_counter 2)
 
-let test2 () =
+let three_channels_joined () =
   Scheduler.run (fun () ->
       let transferred = Atomic.make 0 in
 
@@ -49,7 +49,7 @@ let test2 () =
       assert (Atomic.get transferred == 1);
       ())
 
-let test3 () =
+let message_counter_stress () =
   Scheduler.run (fun () ->
       let receiver_counter = Atomic.make 0 in
       let assert_counter v = assert (Atomic.get receiver_counter == v) in
@@ -74,8 +74,8 @@ let () =
     [
       ( "simple",
         [
-          test_case "one channel" `Quick test1;
-          test_case "three channels" `Quick test2;
-          test_case "one channel, 10^6 items" `Quick test3;
+          test_case "message counter" `Quick message_counter;
+          test_case "three channels joined" `Quick three_channels_joined;
+          test_case "message counter, 10^6 items" `Quick message_counter_stress;
         ] );
     ]

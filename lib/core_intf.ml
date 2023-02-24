@@ -22,7 +22,7 @@ module type S = sig
   val attempt : ('a, 'b) t -> ('a, 'b option) t
   val run : ('a, 'b) t -> 'a -> 'b
 
-  module Catalyst : sig    
+  module Catalyst : sig
     type ('a, 'b) reagent := ('a, 'b) t
     type t
 
