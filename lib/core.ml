@@ -190,7 +190,7 @@ module Make (Sched : Scheduler.S) :
     without_offer pause r v
 
   module Catalyst = struct
-    type catalyst = Offer.catalyst
+    type t = Offer.catalyst
 
     let catalyse r v =
       let offer, catalyst = Offer.make_catalyst () in

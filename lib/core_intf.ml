@@ -22,11 +22,12 @@ module type S = sig
   val attempt : ('a, 'b) t -> ('a, 'b option) t
   val run : ('a, 'b) t -> 'a -> 'b
 
-  module Catalyst : sig
-    type catalyst
+  module Catalyst : sig    
+    type ('a, 'b) reagent := ('a, 'b) t
+    type t
 
-    val catalyse : ('a, 'b) t -> 'a -> catalyst
-    val cancel : catalyst -> unit
+    val catalyse : ('a, 'b) reagent -> 'a -> t
+    val cancel : t -> unit
   end
 
   val commit : ('a, 'a) t
