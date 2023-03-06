@@ -3,7 +3,6 @@ module Reagents = Reagents.Make (Scheduler)
 module Counter = Reagents.Data.Counter
 open Reagents
 
-
 let message_counter () =
   Scheduler.run (fun () ->
       let receiver_counter = Atomic.make 0 in

@@ -1,4 +1,6 @@
-module Scheduler = (val Reagents.Toy_scheduler.make ~raise_if_all_idle:true 1 ())
+module Scheduler =
+  (val Reagents.Toy_scheduler.make ~raise_if_all_idle:true 1 ())
+
 module Reagents = Reagents.Make (Scheduler)
 open Reagents
 

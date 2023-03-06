@@ -17,5 +17,4 @@
 module type S = Reagents_intf.S
 
 module Make (Sched : Scheduler.S) : S
-
 module Toy_scheduler = Toy_scheduler
