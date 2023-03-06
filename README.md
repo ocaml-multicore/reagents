@@ -10,6 +10,7 @@ Reagents are an experimental library for writing multicore programs. Reagents pr
 * [Limitations](#limitiations)
 * [Getting Reagents](#getting-reagents)
 * [Key Concepts](#key-concepts)
+* [Note on internals](#note-on-internals)
 * [License](#license)
 * [Reading](#reading)
 
@@ -89,9 +90,9 @@ val (<*>) : ('a,'b) t -> ('a,'c) t -> ('a,'b * 'c) t
 val (<+>) : ('a,'b) t -> ('a,'b) t -> ('a,'b) t
 ```
 
-### Helpers
+### Others
 
-There is a number of other values defined in the public [interface](lib/base_intf.ml) that serve as units, helpers or a way to transform existing reagents. Perhaps the most notable one is `attempt`.
+There is a number of other values defined in the [public interface](lib/base_intf.ml) that serve as units, helpers or ways to transform existing reagents. Perhaps the most notable one is `attempt`.
 
 ```ocaml
 val attempt : ('a, 'b) t -> ('a, 'b option) t
