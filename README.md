@@ -117,7 +117,7 @@ Reagents exposes two core data structures. Complex data structures should utilis
 
 * Reference - a low-level object akin to an `'a Atomic.t`, which can be modified using compare-and-set operation. In contrast with standard library's atomic, if the expected value does not match it is going to suspend until operation can succeed (in the default case). 
 
-* Channel - a two-way channel for sharing by communicating. 
+* Channel - a two-way channel for sharing memory by communicating. 
 
 The library also provides a number of higher level data structures and synchronisation primitives. See [intf](lib/reagents_intf.ml).
 
@@ -130,11 +130,15 @@ directory of the distribution. They can be built and run with:
 
 Individual tests are built as executables (available in Dune's `_build` directory).
 
-## Internals
+## Note on internals
 
-- non-blocking case - kcas 
+Reagents are largely driven by [kcas](https://github.com/ocaml-multicore/kcas). kcas is a software solution for executing multiple atomic (CAS / get) operations as a single transaction on architectures providing only a single-word CAS. The current implementation of kcas requires only k+1 atomic operations for k-location update.
 
-- blocking case - kcas + offers
+In the non-blocking case, Reagents constitute a convenient abstraction over specification and aggregation of individual atomic operations. If the atomic operations can be constructed and committed immediately, a reagent succeeds using the fast-path. 
+
+However, an operation may be unable to proceed. If fast-path found that operation cannot finish (e.g. pop on empty stack), Reagents core generates an offer, which is published in relevant queue with extra information and fiber suspends on it. Then, when another thread comes, it sees the offer and acts accordingly. In the case of reference, it's going to wake-up all waiters. In the case of channel, it will take suspended thread's transaction, merge it with their own, and try to commit everything at once. If the commit succeeds, it provides suspended thread with the result and resumes it. That cancels the offer.
+
+These two mechanisms are fundamental to the design of Reagents.
 
 ## License
 
