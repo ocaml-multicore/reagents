@@ -124,8 +124,9 @@ val (<+>) : ('a,'b) t -> ('a,'b) t -> ('a,'b) t
 ### Others
 
 There is a number of other values defined in the
-[public interface](lib/base_intf.ml) that serve as units, helpers or ways to
-transform existing reagents. Perhaps the most notable one is `attempt`.
+[public interface](lib/base_intf.ml) that serve as units, helpers or
+transformations for existing reagents. Perhaps the most notable one is
+`attempt`.
 
 ```ocaml
 val attempt : ('a, 'b) t -> ('a, 'b option) t
