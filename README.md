@@ -10,7 +10,7 @@ Reagents are an experimental library for writing multicore programs. Reagents pr
 * [Limitations](#limitiations)
 * [Getting Reagents](#getting-reagents)
 * [Key Concepts](#key-concepts)
-* [Note on internals](#note-on-internals)
+* [Development](#development)
 * [License](#license)
 * [Reading](#reading)
 
@@ -131,7 +131,21 @@ directory of the distribution. They can be built and run with:
 
 Individual tests are built as executables (available in Dune's `_build` directory).
 
-## Note on internals
+
+## Development
+
+### Formatting
+
+This project uses [ocamlformat](https://github.com/ocaml-ppx/ocamlformat) (for
+OCaml) and [prettier](https://prettier.io/) (for Markdown).
+
+### To make a new release
+
+1. Update [CHANGES.md](CHANGES.md).
+2. Run `dune-release tag VERSION` to create a tag for the new `VERSION`.
+3. Run `dune-release` to publish the new `VERSION`.
+
+### Internals quick start
 
 Reagents are largely driven by [kcas](https://github.com/ocaml-multicore/kcas). kcas is a software solution for executing multiple atomic (CAS / get) operations as a single transaction on architectures providing only a single-word CAS. The current implementation of kcas requires only k+1 atomic operations for k-location update.
 
