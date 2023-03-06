@@ -1,7 +1,8 @@
-module Scheduler = (val Sched_ws.make 1 ())
+module Scheduler = (val Reagents.Toy_scheduler.make 1 ())
 module Reagents = Reagents.Make (Scheduler)
 module Counter = Reagents.Data.Counter
 open Reagents
+
 
 let message_counter () =
   Scheduler.run (fun () ->

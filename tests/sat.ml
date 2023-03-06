@@ -1,4 +1,4 @@
-module Scheduler = (val Sched_ws.make 1 ())
+module Scheduler = (val Reagents.Toy_scheduler.make 1 ())
 module Reagents = Reagents.Make (Scheduler)
 open Reagents
 

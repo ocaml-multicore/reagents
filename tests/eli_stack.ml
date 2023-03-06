@@ -19,7 +19,7 @@ let num_items = 1_000_000
 let items_per_dom = num_items / num_doms
 let () = Printf.printf "items_per_domain = %d\n%!" items_per_dom
 
-module S = (val Sched_ws.make num_doms ())
+module S = (val Reagents.Toy_scheduler.make num_doms ())
 module Reagents = Reagents.Make (S)
 open Reagents
 

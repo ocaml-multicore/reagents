@@ -26,7 +26,7 @@ module Ref_channel (Reagents : Reagents.S) :
         match st with None -> None | Some v -> Some (None, v))
 end
 
-module Scheduler = (val Sched_ws.make 1 ())
+module Scheduler = (val Reagents.Toy_scheduler.make 1 ())
 module Reagents = Reagents.Make (Scheduler)
 open Reagents
 module Channel = Ref_channel (Reagents)

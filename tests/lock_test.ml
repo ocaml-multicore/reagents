@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-module Scheduler = (val Sched_ws.make 1 ())
+module Scheduler = (val Reagents.Toy_scheduler.make 1 ())
 module Reagents = Reagents.Make (Scheduler)
 open Reagents
 module Lock = Sync.Lock

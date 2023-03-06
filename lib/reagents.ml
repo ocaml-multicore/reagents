@@ -40,3 +40,5 @@ module Make (Sched : Scheduler.S) : S = struct
     module Condition_variable = Condition_variable.Make (B) (Lock)
   end
 end
+
+module Toy_scheduler = Toy_scheduler
