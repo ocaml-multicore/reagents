@@ -190,6 +190,13 @@ variable). See [interface](lib/reagents_intf.ml).
 
 ## Sample programs
 
+This section showcases a few applications of Reagents.
+
+- [Counter](#counter)
+- [Reference](#reference)
+- [Channel](#channel)
+- [Catalyst](#catalyst)
+
 ### Counter
 
 See a simple example of creating a synchronized counter below.
@@ -268,13 +275,12 @@ There's a couple of nuances worth keeping in mind:
   channel reactions Reagents are able to commit. See
   [pair_not_parallel.ml](tests/pair_not_parallel.ml) for more details.
 
-### Catalysts
+### Catalyst
 
-Catalysts are passively invoked reagents. They do not react on their own,
-instead they remain ready to react with others as many times as needed, until
-cancelled. They let us link multiple data structures to form a graph of
-computations. See [catalyst_test.ml](tests/catalyst_test.ml) for examples of
-linking channels.
+Catalyst is a passively invoked reagent. It does not react on its own, instead
+it remains ready to react with others as many times as needed, until cancelled.
+Catalysts let us link multiple data structures to form a graph of computations.
+See [catalyst_test.ml](tests/catalyst_test.ml) for examples of linking channels.
 
 ### More
 
