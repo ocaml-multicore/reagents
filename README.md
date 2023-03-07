@@ -126,7 +126,7 @@ val (<+>) : ('a,'b) t -> ('a,'b) t -> ('a,'b) t
 There is a number of other values defined in the
 [public interface](lib/base_intf.ml) that serve as units, helpers or
 transformations for existing reagents. Perhaps the most notable one is
-`attempt`.
+`attempt`, which converts a blocking reagent into non-blocking one.
 
 ```ocaml
 val attempt : ('a, 'b) t -> ('a, 'b option) t
