@@ -294,11 +294,6 @@ directory).
 This project uses [ocamlformat](https://github.com/ocaml-ppx/ocamlformat) (for
 OCaml) and [prettier](https://prettier.io/) (for Markdown).
 
-### To make a new release
-
-Please follow [dune-release](https://github.com/tarides/dune-release) workflow,
-if possible.
-
 ### Internals quick start
 
 Reagents are largely driven by [kcas](https://github.com/ocaml-multicore/kcas).
