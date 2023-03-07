@@ -174,10 +174,10 @@ end) : S = struct
         (fun timeout ->
           Printexc.record_backtrace true;
           let start_time = Unix.gettimeofday () in
-          let difference = 
-            match timeout with 
-            | `Seconds difference -> difference 
-            | `Default -> 30. 
+          let difference =
+            match timeout with
+            | `Seconds difference -> difference
+            | `Default -> 30.
           in
           Gc.create_alarm (fun () ->
               let current_time = Unix.gettimeofday () in
@@ -191,7 +191,6 @@ end) : S = struct
         f ());
 
     Option.iter Gc.delete_alarm timeout_alarm
-
 
   let run_allow_deadlock ?timeout f =
     match run ?timeout f with exception All_domains_idle -> () | _ -> ()
