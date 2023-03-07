@@ -10,7 +10,7 @@ retrying.
 ## Contents
 
 - [Motivation](#motivation)
-- [Limitations](#limitiations)
+- [Limitations](#limitations)
 - [Getting Reagents](#getting-reagents)
 - [Key Concepts](#key-concepts)
 - [Development](#development)
@@ -46,7 +46,7 @@ approaches:
   resume fibers as the conditions for their progress are meet or not. This makes
   common anti-patterns such as busy-waiting easy to avoid.
 
-## Limitiations
+## Limitations
 
 Reagents are weaker than transactional memory. A reagent must be decomposable
 into a list of compare-and-swap operations. This eliminates the need for global
@@ -54,15 +54,16 @@ serializability of transactions.
 
 ## Getting Reagents
 
-Reagents require OCaml 5.0.0 (`opam switch create 5.0.0`).
+Reagents require OCaml 5 (`opam switch create 5.0.0`).
 
 Install Reagents from this repository.
 
 ```sh
-git clone git@github.com:ocaml-multicore/reagents.git
-cd reagents
-opam install . -y
+opam pin -y https://github.com/ocaml-multicore/reagents.git
 ```
+
+In the near future Reagents will be available in the opam repository.
+
 
 Test the setup in utop with the following snippet.
 
@@ -81,10 +82,20 @@ hello world
 
 ## Key concepts
 
+This section briefly explains all the key concepts required for using Reagents.
+
+- [Scheduler](#scheduler)
+- [Reagent Type](#reagent-type)
+- [Combinators](#combinators)
+- [Others](#others)
+- [Running a Reagent](#running-a-reagent)
+
 ### Scheduler
 
 Reagents are parametrised over a minimal
-[scheduler interface](lib/scheduler_intf.ml) to avoid busy-waiting.
+[scheduler interface](lib/scheduler_intf.ml). If an active reagent cannot make
+progress, Reagents automatically suspend the fiber. Once someone else updates
+the state, Reagents trigger required resumptions. This behavior comes for free.
 
 ```ocaml
   type 'a cont
@@ -94,11 +105,10 @@ Reagents are parametrised over a minimal
   val get_tid : unit -> int
 ```
 
-If a running reagent cannot make progress, the fiber is automatically suspended.
-Once someone else updates relevant state, Reagents trigger required resumptions.
-A toy scheduler is available in [Reagents.Toy_scheduler](lib/toy_scheduler.mli).
+A toy scheduler for experimenting and running tests is available in
+[Reagents.Toy_scheduler](lib/toy_scheduler.mli).
 
-### Type
+### Reagent Type
 
 A computation within reagents framework has the following type
 `('a, 'b) Reagents.t`. Here, the computation takes a parameter of type `'a` and
@@ -110,63 +120,167 @@ or none at all.
 ### Combinators
 
 Reagents can be composed in arbitrary ways. The following three main combinators
-are exposed by the library.
+are exposed by the library. These can be composed into more complex combinators.
+
+- ```ocaml
+  val (>>>) : ('a,'b) t -> ('b,'c) t -> ('a,'c) t
+  ```
+
+Sequential composition runs one reagent after another. It passes the result of
+the first one as parameter to the second one.
+
+- ```ocaml
+  val (<*>) : ('a,'b) t -> ('a,'c) t -> ('a,'b * 'c) t
+  ```
+
+Conjunction executes both reagents at once and returns both results. Note, this
+combinator still attempts to execute its components sequentially. It differs
+with [>>>] in information flow only.
+
+- ```ocaml
+  val (<+>) : ('a,'b) t -> ('a,'b) t -> ('a,'b) t
+  ```
+
+Disjunction tries to execute the first reagent and if it blocks, it attempts the
+second one. If both block, the first one to unblock is executed. Also referred
+to as left-biased choice.
+
+### Running a Reagent
+
+Once the desired reagent has been composed, it can be run.
 
 ```ocaml
-(* Sequential composition runs one reagent after another. It passes the result of the first one as parameter to the second one. *)
-val (>>>) : ('a,'b) t -> ('b,'c) t -> ('a,'c) t
-(* Conjunction executes both reagents at once and returns both results. Note, this combinator still attempts to execute its components sequentially. It only differs with [>>>] in information flow. *)
-val (<*>) : ('a,'b) t -> ('a,'c) t -> ('a,'b * 'c) t
-(* Disjunction tries to execute the first reagent and if it blocks, it attempts the second one. If both block, the first one to unblock is executed. *)
-val (<+>) : ('a,'b) t -> ('a,'b) t -> ('a,'b) t
+val run : ('a, 'b) t -> 'a -> 'b
 ```
+
+`run r v` executes the reagent `r` with value `v`.
+
+Note, this function has to be executed from within a scheduler for the
+suspension and resumption effects to be handled correctly.
 
 ### Others
 
 There is a number of other values defined in the
 [public interface](lib/base_intf.ml) that serve as units, helpers or
 transformations for existing reagents. Perhaps the most notable one is
-`attempt`, which converts a blocking reagent into non-blocking one.
+`attempt`, which converts a blocking reagent into a non-blocking one.
 
 ```ocaml
 val attempt : ('a, 'b) t -> ('a, 'b option) t
-(** Convert a blocking reagent into a non-blocking one. If reagent [r] is a
-    blocks, then [attempt r] return [None]. If [r] does not block and returns
-    a value [v], then [attempt r] returns [Some v]. *)
 ```
 
-### Executing a reagent
-
-Once a desired reagent has been composed, it can be run.
-
-```ocaml
-val run : ('a, 'b) t -> 'a -> 'b
-(** [run r v] runs the reagents [r] with value [v]. *)
-
-```
-
-Note, this function has to be executed from within a scheduler for the
-suspension and resumption effects to be handled correctly.
+`attempt r` converts a blocking reagent into a non-blocking one. If the reagent
+blocks, then attempt returns `None`. Otherwise, the reagent is commited
+immidiately and the returned option value is non-empty.
 
 ### Data structures
 
 Reagents exposes two core data structures. Complex data structures should
 utilise these as buildling blocks, if possible.
 
-- Reference - a low-level object akin to an `'a Atomic.t`, which can be modified
-  using compare-and-set operation. In contrast with standard library's atomic,
-  if the expected value does not match it is going to suspend until operation
-  can succeed (in the default case).
+- _Reference_ &mdash; a low-level object akin to an `'a Atomic.t`, which can be
+  modified using compare-and-set operation. In contrast with standard library's
+  atomic, if the expected value does not match it is going to suspend until
+  operation can succeed (in the default case).
 
-- Channel - a two-way channel for sharing memory by communicating.
+- _Channel_ &mdash; a two-way channel for sharing memory by communicating.
 
-The library also provides a number of higher level data structures and
-synchronisation primitives. See [intf](lib/reagents_intf.ml).
+The library also provides a number of higher level data structures (e.g.
+counter, stack, queue) and synchronisation primitives (e.g. lock, conditional
+variable). See [interface](lib/reagents_intf.ml).
 
 ## Sample programs
 
-Sample programs and tests are located in the [`tests`](tests) directory of the
-distribution. They can be built and run with:
+### Counter
+
+See a simple example of creating a synchronized counter below.
+
+```ocaml
+# let counter = Counter.create 0 in
+  let a = run (Counter.inc counter) () in
+  let b = run (Counter.inc counter) () in
+  let c = run (Counter.dec counter) () in
+  (a, b, c);;
+- : int * int * int = (0, 1, 2)
+```
+
+Both `inc` and `dec` operations are of type `(unit, int) Reagents.t` since they
+take `unit` as input and return previous value. Now, imagine there's a number of
+counters representing different statistics about the system, balances of bank
+accounts, etc.
+
+Reagents let us take a consistent snapshot of the system without locks.
+
+```ocaml
+# let c1 = Counter.create 0 in
+  let c2 = Counter.create 0 in
+
+  run (Counter.get c1 <*> Counter.get c2) ();;
+- : int * int = (0, 0)
+```
+
+### Reference
+
+Counting from [counter](#counter), we can update any number of locations at once
+as well. This example uses references, which are similar to an atomic variable.
+
+```ocaml
+# let account_1 = Ref.mk_ref 100 in
+  let account_2 = Ref.mk_ref 0 in
+
+  let transfer a b amount =
+    Ref.upd a (fun acc () -> Some (acc - amount, ()))
+    >>> Ref.upd b (fun acc () -> Some (acc + amount, ()))
+  in
+
+  run (transfer account_1 account_2 100) ();
+
+  ((Ref.read_imm account_1), (Ref.read_imm account_2));;
+- : int * int = (0, 100)
+```
+
+Note, in the example above the function passed to `Ref.upd` returns an option
+type. If the observed value of account is not appropriate for requested
+operation (e.g. the transfer would make account 1 negative), it may choose to
+return `None`. In such a case, reagent will block until value of reference is
+updated by another actor or it can be attempted, to simply return with failure
+if reagent cannot proceed. See [counter_test.ml](tests/counter_test.ml) for
+example.
+
+### Channel
+
+Channel is the building block for sharing memory by communication. Reagents
+offer a two-way channel (but we can pass units in one direction).
+
+```ocaml
+# Scheduler.run (fun () ->
+    let endpoint_a, endpoint_b = Channel.mk_chan () in
+    Scheduler.fork (fun () -> run (Channel.swap endpoint_a) 12345);
+    print_int (run (Channel.swap endpoint_b) ()));;
+12345- : unit = ()
+```
+
+There's a couple of nuances worth keeping in mind:
+
+- Channels have a blocking nature; the reaction can occur only if there's two
+  matching reagents ready to interact. Thus, the one to arrive first is going to
+  block until its match is ready.
+- Since `<*>` is not truly parallel, there are some limitations to the type of
+  channel reactions Reagents are able to commit. See
+  [pair_not_parallel.ml](tests/pair_not_parallel.ml) for more details.
+
+### Catalysts
+
+Catalysts are passively invoked reagents. They do not react on their own,
+instead they remain ready to react with others as many times as needed, until
+cancelled. They let us link multiple data structures to form a graph of
+computations. See [catalyst_test.ml](tests/catalyst_test.ml) for examples of
+linking channels.
+
+### More
+
+More sample programs and tests are located in the [`tests`](tests) directory of
+the distribution. They can be built and run with:
 
     dune build @runtest
 
@@ -182,34 +296,32 @@ OCaml) and [prettier](https://prettier.io/) (for Markdown).
 
 ### To make a new release
 
-1. Update [CHANGES.md](CHANGES.md).
-2. Run `dune-release tag VERSION` to create a tag for the new `VERSION`.
-3. Run `dune-release` to publish the new `VERSION`.
+Please follow [dune-release](https://github.com/tarides/dune-release) workflow,
+if possible.
 
 ### Internals quick start
 
 Reagents are largely driven by [kcas](https://github.com/ocaml-multicore/kcas).
-kcas is a software solution for executing multiple atomic (CAS / get) operations
-as a single transaction on architectures providing only a single-word CAS. The
-current implementation of kcas requires only k+1 atomic operations for
-k-location update.
+kcas is a software solution for executing multiple atomic operations as a single
+transaction on architectures providing a single-word CAS only. The current
+implementation of kcas requires k+1 atomic operations for k-location update.
 
 In the non-blocking case, Reagents constitute a convenient abstraction over
-specification and aggregation of individual atomic operations. If the atomic
-operations can be constructed and committed immediately, a reagent succeeds
-using the fast-path.
+specification and aggregation of individual atomic operations. If the list of
+required atomic operations can be constructed and committed immediately, a
+reagent succeeds using the fast-path.
 
 However, an operation may be unable to proceed. If fast-path found that
-operation cannot finish (e.g. pop on empty stack), Reagents core generates an
-offer, which is published in relevant queue with extra information and fiber
-suspends on it. Then, when another thread comes, it sees the offer and acts
-accordingly. In the case of reference, it's going to wake-up all waiters. In the
-case of channel, it will take suspended thread's transaction, merge it with
-their own, and try to commit everything at once. If the commit succeeds, it
-provides suspended thread with the result and resumes it. That cancels the
-offer.
+operation cannot finish (e.g. pop on an empty stack), Reagents core generates an
+offer. The offer is then published in relevant queue with extra information and
+fiber suspends on it. Once another thread comes, it sees the offer and resumes
+fibers that are now unblocked. This logic is reagent-specific. In the case of
+reference, it's going to wake-up all waiters. In the case of channel, it will
+take suspended thread's transaction, merge it with their own, and try to commit
+everything at once. If the commit succeeds, it provides suspended thread with
+the result and resumes it. Both actions cancel the offer.
 
-These two mechanisms are fundamental to the design of Reagents.
+These two mechanisms are the key design choices behind Reagents.
 
 ## License
 
