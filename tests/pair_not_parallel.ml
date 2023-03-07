@@ -22,7 +22,7 @@ let work sw v () =
   Printf.printf "%d" x
 
 let two_way () =
-  Scheduler.run_allow_deadlock (fun () ->
+  Scheduler.run_allow_deadlock ~timeout:`Default (fun () ->
       let sw1, sw2 = mk_tw_chan () in
       Scheduler.fork (work sw1 1);
       work sw2 2 ())
@@ -41,7 +41,7 @@ let work sw v () =
   Printf.printf "%d %d" x y
 
 let three_way () =
-  Scheduler.run_allow_deadlock (fun () ->
+  Scheduler.run_allow_deadlock ~timeout:`Default (fun () ->
       let sw1, sw2, sw3 = mk_tw_chan () in
       Scheduler.fork (work sw1 1);
       Scheduler.fork (work sw2 2);

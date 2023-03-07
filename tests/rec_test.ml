@@ -12,7 +12,7 @@ let rec lock_and_call l i =
   assert (run (RLock.rel l) ())
 
 let test1 () =
-  Scheduler.run (fun () ->
+  Scheduler.run ~timeout:`Default (fun () ->
       let l = RLock.create () in
 
       Scheduler.fork (fun () ->

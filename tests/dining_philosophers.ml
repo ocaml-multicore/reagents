@@ -18,8 +18,8 @@
 let num_philosophers = 3
 let num_rounds = 10_000
 
-module S = (val Sched_ws.make 3 ())
-module Reagents = Reagents.Make (S)
+module Scheduler = (val Sched_ws.make 3 ())
+module Reagents = Reagents.Make (Scheduler)
 open Reagents
 open Channel
 module Sync = Reagents.Sync
@@ -37,13 +37,13 @@ let take f = swap f.take
 let eat l_fork r_fork _i _j =
   ignore @@ run (take l_fork <*> take r_fork) ();
   (* Printf.printf "Philosopher %d eating in round %d\n%!" i j; *)
-  S.fork @@ run (drop l_fork);
-  S.fork @@ run (drop r_fork)
+  Scheduler.fork @@ run (drop l_fork);
+  Scheduler.fork @@ run (drop r_fork)
 
 let main () =
   let b = CDL.create num_philosophers in
   let forks = Array.init num_philosophers (fun _ -> mk_fork ()) in
-  Array.iter (fun fork -> S.fork @@ run (drop fork)) forks;
+  Array.iter (fun fork -> Scheduler.fork @@ run (drop fork)) forks;
 
   let work i () =
     let l_fork = forks.(i) in
@@ -55,10 +55,10 @@ let main () =
   in
 
   for i = 1 to num_philosophers - 1 do
-    S.fork (work i)
+    Scheduler.fork (work i)
   done;
   work 0 ();
   run (CDL.await b) ();
   exit 0
 
-let () = S.run main
+let () = Scheduler.run ~timeout:`Default main

@@ -19,14 +19,14 @@ module Reagents = Reagents.Make (Scheduler)
 open Reagents
 
 let update () =
-  Scheduler.run (fun () ->
+  Scheduler.run ~timeout:`Default (fun () ->
       let r = Ref.mk_ref 0 in
       let foo ov () = if ov = 0 then None else Some (2, ()) in
       Scheduler.fork (fun () -> run (Ref.upd r foo) ());
       run (Ref.cas r 0 1) ())
 
 let update_monadic () =
-  Scheduler.run (fun () ->
+  Scheduler.run ~timeout:`Default (fun () ->
       let r = Ref.mk_ref 2 in
       let test2_rg =
         Ref.read r >>= fun i -> if i <> 3 then never else constant ()

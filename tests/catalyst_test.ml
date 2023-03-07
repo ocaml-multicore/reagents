@@ -23,7 +23,7 @@ let message_counter () =
       assert_counter 2)
 
 let three_channels_joined () =
-  Scheduler.run (fun () ->
+  Scheduler.run ~timeout:`Default (fun () ->
       let transferred = Atomic.make 0 in
 
       let (a1 : (int, unit) Channel.endpoint), a2 = Channel.mk_chan () in
@@ -50,7 +50,7 @@ let three_channels_joined () =
       ())
 
 let message_counter_stress () =
-  Scheduler.run (fun () ->
+  Scheduler.run ~timeout:`Default (fun () ->
       let receiver_counter = Atomic.make 0 in
       let assert_counter v = assert (Atomic.get receiver_counter == v) in
 

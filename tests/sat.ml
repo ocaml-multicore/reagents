@@ -23,7 +23,7 @@ let rec join acc = function
 let join l = join [] l
 
 let test1 () =
-  Scheduler.run (fun () ->
+  Scheduler.run ~timeout:`Default (fun () ->
       let r =
         join (make [] n) >>= fun l ->
         (* instead of l = answer, assume `eval_formula l formula` where
