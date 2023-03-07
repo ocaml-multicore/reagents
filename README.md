@@ -36,12 +36,12 @@ approaches:
 
 - _Expressiveness_. Reagents provide building blocks for various multithreading
   patterns: communicating by sharing memory and message passing, active and
-  passive invocation of operations, conjunction (pair), and disjunction (choice)
+  passive invocation of operations, conjunction (pair) and disjunction (choice)
   of operations.
 
 - _Fine-grained multithreading_. Low-level synchronisation primitives tend to
   perform and scale better than high-level ones. Reagents use fine-grained
-  multithreading internally and expose them for expert users.
+  multithreading internally and expose it for expert users.
 
 - _Efficient retrying_. Reagents parametrise over the scheduler to suspend and
   resume fibers as the conditions for their progress are met or not. This makes
