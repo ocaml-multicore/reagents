@@ -22,10 +22,11 @@ module type S = sig
   val fork : (unit -> unit) -> unit
   val yield : unit -> unit
   val get_tid : unit -> int
-  val run : (unit -> unit) -> unit
+  val run : ?timeout:[ `Seconds of float | `Default ] -> (unit -> unit) -> unit
 
   (* wrapper for tests that are expected to block (be it desirable or not) *)
-  val run_allow_deadlock : (unit -> unit) -> unit
+  val run_allow_deadlock :
+    ?timeout:[ `Seconds of float | `Default ] -> (unit -> unit) -> unit
 end
 
 exception All_domains_idle
@@ -139,7 +140,7 @@ end) : S = struct
             | _ -> None (* forward the unhandled effects to the outer handler *));
       }
 
-  let run f =
+  let run ?timeout f =
     let t =
       {
         num_threads = Atomic.make 0;
@@ -168,12 +169,32 @@ end) : S = struct
       domains;
     t.domain_ids <- domains;
 
+    let timeout_alarm =
+      Option.map
+        (fun timeout ->
+          Printexc.record_backtrace true;
+          let start_time = Unix.gettimeofday () in
+          let difference = 
+            match timeout with 
+            | `Seconds difference -> difference 
+            | `Default -> 30. 
+          in
+          Gc.create_alarm (fun () ->
+              let current_time = Unix.gettimeofday () in
+              if current_time > start_time +. difference then
+                failwith "timed out"))
+        timeout
+    in
+
     spawn t (fun () ->
         Atomic.set started true;
-        f ())
+        f ());
 
-  let run_allow_deadlock f =
-    match run f with exception All_domains_idle -> () | _ -> ()
+    Option.iter Gc.delete_alarm timeout_alarm
+
+
+  let run_allow_deadlock ?timeout f =
+    match run ?timeout f with exception All_domains_idle -> () | _ -> ()
 end
 
 let make ?(raise_if_all_idle = false) num_domains () =
