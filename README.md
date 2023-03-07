@@ -64,7 +64,6 @@ opam pin -y https://github.com/ocaml-multicore/reagents.git
 
 In the near future Reagents will be available in the opam repository.
 
-
 Test the setup in utop with the following snippet.
 
 ```ocaml
