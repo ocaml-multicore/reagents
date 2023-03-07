@@ -177,7 +177,7 @@ end) : S = struct
           let difference =
             match timeout with
             | `Seconds difference -> difference
-            | `Default -> 30.
+            | `Default -> 120.
           in
           Gc.create_alarm (fun () ->
               let current_time = Unix.gettimeofday () in
