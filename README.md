@@ -50,8 +50,8 @@ approaches:
 ## Limitations
 
 Reagents are weaker than transactional memory. A reagent must be decomposable
-into a list of compare-and-swap operations. This eliminates the need for global
-serializability of transactions.
+into a list of compare-and-set operations. This eliminates the need for any
+extra accounting for performed CASes.
 
 ## Getting Reagents
 
