@@ -18,8 +18,8 @@ let num_doms = 4
 let num_items = 1_000_000
 let items_per_dom = num_items / num_doms
 
-module S = (val Sched_ws.make num_doms ())
-module Reagents = Reagents.Make (S)
+module Scheduler = (val Sched_ws.make num_doms ())
+module Reagents = Reagents.Make (Scheduler)
 open Reagents
 
 module type QUEUE = sig
@@ -88,7 +88,7 @@ module Test (Q : QUEUE) = struct
       | Some _ -> consume (i + 1)
     in
     for _ = 1 to num_doms - 1 do
-      S.fork (fun () ->
+      Scheduler.fork (fun () ->
           produce items_per_domain;
           consume 0;
           run (CDL.count_down b) ())
@@ -106,4 +106,4 @@ let main () =
     sd
     (float_of_int num_items /. m)
 
-let () = S.run main
+let () = Scheduler.run ~timeout:`Default main

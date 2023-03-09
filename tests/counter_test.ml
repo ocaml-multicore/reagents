@@ -20,7 +20,7 @@ open Reagents
 module Counter = Data.Counter
 
 let counter () =
-  Scheduler.run (fun () ->
+  Scheduler.run ~timeout:`Default (fun () ->
       let c = Counter.create 0 in
       assert (run (Counter.get c) () == 0);
       assert (run (Counter.inc c) () == 0);
@@ -29,7 +29,7 @@ let counter () =
       assert (run (Counter.get c) () == 1))
 
 let counter_await_value () =
-  Scheduler.run_allow_deadlock (fun () ->
+  Scheduler.run_allow_deadlock ~timeout:`Default (fun () ->
       let c = Counter.create 0 in
       assert (run (Counter.inc c) () == 0);
       run

@@ -20,7 +20,7 @@ open Reagents
 open Reagents.Channel
 
 let two_chan_passthrough () =
-  Scheduler.run (fun () ->
+  Scheduler.run ~timeout:`Default (fun () ->
       let ep1, ep2 = mk_chan () in
       let fp1, fp2 = mk_chan () in
       Scheduler.fork (fun () -> assert (run (swap fp1 >>> swap ep1) 1 == 2));
@@ -28,21 +28,21 @@ let two_chan_passthrough () =
       assert (run (swap ep2) 2 == 0))
 
 let one_chan_loopback () =
-  Scheduler.run (fun () ->
+  Scheduler.run ~timeout:`Default (fun () ->
       let ep1, ep2 = mk_chan () in
       Scheduler.fork (fun () -> assert (run (swap ep1 >>> swap ep1) 1 == 0));
       Scheduler.fork (fun () -> assert (run (swap ep2) 0 == 2));
       assert (run (swap ep2) 2 == 1))
 
 let chan_with_choice () =
-  Scheduler.run (fun () ->
+  Scheduler.run ~timeout:`Default (fun () ->
       let ep1, ep2 = mk_chan () in
       Scheduler.fork (fun () -> assert (run (swap ep1 <+> swap ep2) 0 == 1));
       assert (run (swap ep2) 1 == 0))
 
 let chan_swap_on_overlapping_locs () =
   (* Reagents are not as powerful as communicating transactions. *)
-  Scheduler.run_allow_deadlock (fun () ->
+  Scheduler.run_allow_deadlock ~timeout:`Default (fun () ->
       let ep1, ep2 = mk_chan () in
       Scheduler.fork (fun () ->
           Printf.printf "%d\n%!" (run (swap ep1 >>> swap ep1) 0));
@@ -50,7 +50,7 @@ let chan_swap_on_overlapping_locs () =
 
 let ref_upd_on_overlapping_locs () =
   (* This test should not succeed; expecting kcas failure *)
-  Scheduler.run_allow_deadlock (fun () ->
+  Scheduler.run_allow_deadlock ~timeout:`Default (fun () ->
       let a, b = mk_chan () in
       let r = Ref.mk_ref 0 in
       Scheduler.fork (fun () ->

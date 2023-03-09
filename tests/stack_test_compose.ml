@@ -19,8 +19,8 @@ let num_items = 1_000_000
 let items_per_dom = num_items / 2
 let () = Printf.printf "items_per_domain = %d\n%!" @@ items_per_dom
 
-module S = (val Sched_ws.make 4 ())
-module Reagents = Reagents.Make (S)
+module Scheduler = (val Sched_ws.make 4 ())
+module Reagents = Reagents.Make (Scheduler)
 open Reagents
 
 module Benchmark = struct
@@ -75,10 +75,10 @@ module Test (Stack : STACK) = struct
           let _ = Stack.pop q1 q2 in
           consume (i - 1)
     in
-    S.fork (fun () ->
+    Scheduler.fork (fun () ->
         produce 1 q1 items_per_domain;
         run (CDL.count_down b) ());
-    S.fork (fun () ->
+    Scheduler.fork (fun () ->
         produce 2 q2 items_per_domain;
         run (CDL.count_down b) ());
     consume items_per_domain;
@@ -148,4 +148,4 @@ let main () =
 
   ()
 
-let () = S.run main
+let () = Scheduler.run ~timeout:`Default main

@@ -32,7 +32,7 @@ open Reagents
 module Channel = Ref_channel (Reagents)
 
 let chan_send_receive () =
-  Scheduler.run (fun () ->
+  Scheduler.run ~timeout:`Default (fun () ->
       let c = Channel.mk_chan () in
       Scheduler.fork (fun () -> Printf.printf "%d\n" (run (Channel.recv c) ()));
       run (Channel.send c) 10)

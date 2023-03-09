@@ -26,8 +26,8 @@ let () =
 let items_per_dom = num_items / num_doms
 let () = Printf.printf "items_per_domain = %d\n%!" items_per_dom
 
-module S = (val Sched_ws.make num_doms ())
-module Reagents = Reagents.Make (S)
+module Scheduler = (val Sched_ws.make num_doms ())
+module Reagents = Reagents.Make (Scheduler)
 open Reagents
 
 module type STACK = sig
@@ -95,7 +95,7 @@ module Test (Q : STACK) = struct
       else match Q.pop q with None -> consume i | Some _ -> consume (i + 1)
     in
     for i = 0 to num_doms - 1 do
-      S.fork (fun () ->
+      Scheduler.fork (fun () ->
           if i mod 2 == 0 then produce items_per_domain else consume 0;
           run (CDL.count_down b) ())
     done;
@@ -158,4 +158,4 @@ let main () =
   Printf.printf "Channel-based stack: mean = %f, sd = %f tp=%f\n%!" m sd
     (float_of_int num_items /. m)
 
-let () = S.run main
+let () = Scheduler.run ~timeout:`Default main

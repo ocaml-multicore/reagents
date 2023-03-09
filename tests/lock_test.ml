@@ -21,7 +21,7 @@ module Lock = Sync.Lock
 module CV = Sync.Condition_variable
 
 let test () =
-  Scheduler.run (fun () ->
+  Scheduler.run ~timeout:`Default (fun () ->
       let l = Lock.create () in
       let cv = CV.create () in
       run (Lock.acq l) ();
