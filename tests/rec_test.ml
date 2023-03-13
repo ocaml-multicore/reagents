@@ -1,6 +1,6 @@
 let num_domains = 4
 
-module Scheduler = (val Sched_ws.make num_domains ())
+module Scheduler = (val Reagents.Toy_scheduler.make num_domains ())
 module Reagents = Reagents.Make (Scheduler)
 open Reagents
 module RLock = Sync.Recursive_lock (Scheduler)

@@ -14,20 +14,6 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-module type S = sig
-  type 'a cont
-
-  val suspend : ('a cont -> 'a option) -> 'a
-  val resume : 'a cont -> 'a -> unit
-  val fork : (unit -> unit) -> unit
-  val yield : unit -> unit
-  val get_tid : unit -> int
-  val run : (unit -> unit) -> unit
-
-  (* wrapper for tests that are expected to block (be it desirable or not) *)
-  val run_allow_deadlock : (unit -> unit) -> unit
-end
-
 exception All_domains_idle
 
 module Make (S : sig
@@ -35,7 +21,7 @@ module Make (S : sig
 
   val raise_if_all_idle : bool
   (** [raise_if_all_idle] may throw spuriously with multiple domains. *)
-end) : S = struct
+end) : Toy_scheduler_intf.S = struct
   open Effect
   open Effect.Deep
 
@@ -181,4 +167,4 @@ let make ?(raise_if_all_idle = false) num_domains () =
     let num_domains = num_domains
     let raise_if_all_idle = raise_if_all_idle
   end) in
-  (module M : S)
+  (module M : Toy_scheduler_intf.S)
