@@ -19,8 +19,10 @@ module Reagents = Reagents.Make (Scheduler)
 open Reagents
 module Q = Data.MichaelScott_queue
 
-let write_skew_test () =
-  Scheduler.run_allow_deadlock (fun () ->
+let observed_skewed_write = ref false
+
+let work () =
+  Scheduler.run (fun () ->
       let q1 = Q.create () and q2 = Q.create () in
 
       let push_to_q2 =
@@ -58,13 +60,16 @@ let write_skew_test () =
       for _ = 1 to 10_000 do
         match run clear () with
         | Some _, Some _ ->
-            Atomic.set exit true;
-            failwith "write skew!"
+            observed_skewed_write := true;
+            Atomic.set exit true
         | _ -> ()
       done;
       Atomic.set exit true;
-
       ())
+
+let write_skew_test () =
+  work ();
+  assert !observed_skewed_write
 
 let () =
   let open Alcotest in
