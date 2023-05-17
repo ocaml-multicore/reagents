@@ -94,22 +94,18 @@ module Test (Q : QUEUE) = struct
     Reagents.run (CDL.await b) ()
 end
 
-module MakeQ_tx (T : sig
-  open Kcas
-
+module Make_queue (T : sig
   type 'a t
 
   val create : unit -> 'a t
-  val push : 'a t -> 'a -> unit Tx.t
-  val pop : 'a t -> 'a option Tx.t
+  val push : 'a -> 'a t -> unit
+  val take_opt : 'a t -> 'a option
 end) : QUEUE = struct
-  open Kcas
-
   type 'a t = 'a T.t
 
   let create = T.create
-  let push queue value = Tx.commit @@ T.push queue value
-  let pop queue = Tx.commit @@ T.pop queue
+  let push queue value = T.push value queue
+  let pop queue = T.take_opt queue
 end
 
 let main () =
@@ -123,14 +119,9 @@ let main () =
   Printf.printf "Two_lock_queue : mean = %f, sd = %f tp=%f\n%!" m sd
     (float_of_int num_items /. m);
 
-  let module M = Test (MakeQ_tx (References.Tx_linked_queue)) in
+  let module M = Test (Make_queue (Kcas_data.Queue)) in
   let m, sd = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
-  Printf.printf "Kcas linked queue : mean = %f, sd = %f tp=%f\n%!" m sd
-    (float_of_int num_items /. m);
-
-  let module M = Test (MakeQ_tx (References.Tx_two_stack_queue)) in
-  let m, sd = Benchmark.benchmark (fun () -> M.run num_doms items_per_dom) 5 in
-  Printf.printf "Kcas 2-stack queue : mean = %f, sd = %f tp=%f\n%!" m sd
+  Printf.printf "Kcas_data.Queue : mean = %f, sd = %f tp=%f\n%!" m sd
     (float_of_int num_items /. m);
 
   let module M = Test (MakeQ (Reagents.Data.MichaelScott_queue)) in

@@ -15,6 +15,7 @@ depends: [
   "lockfree" {>= "0.3.0"}
   "kcas" {>= "0.2.0"}
   "alcotest" {with-test & >= "1.6.0"}
+  "kcas_data" {with-test & >= "0.2.3"}
   "odoc" {with-doc}
 ]
 build: [

@@ -19,7 +19,7 @@ module Op = Kcas.Op
 
 type 'a ref = 'a Loc.t
 
-let ref = Loc.make
+let ref x = Loc.make x
 let get = Loc.get
 
 type cas_kind = Real of Op.t | Imm of bool

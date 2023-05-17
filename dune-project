@@ -16,6 +16,7 @@
   (lockfree (>= 0.3.0))
   (kcas (>= 0.2.0))
   (alcotest (and :with-test (>= 1.6.0)))
+  (kcas_data (and :with-test (>= 0.2.3)))
   )
  (synopsis "Composable lock-free data and synchronization structures")
  (description "Reagents - Composable lock-free data and synchronization structures"))
