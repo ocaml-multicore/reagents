@@ -31,7 +31,7 @@
 (test
  (name queue_test)
  (modules queue_test)
- (libraries reagents references))
+ (libraries reagents references kcas_data))
 
 (test
  (name reagent_queue_test)
