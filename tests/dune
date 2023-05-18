@@ -4,6 +4,11 @@
  (libraries reagents alcotest))
 
 (test
+ (name write_skew_test)
+ (modules write_skew_test)
+ (libraries reagents alcotest))
+
+(test
  (name dining_philosophers)
  (modules dining_philosophers)
  (libraries reagents))
