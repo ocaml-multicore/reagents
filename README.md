@@ -1,6 +1,17 @@
-[API reference](https://ocaml-multicore.github.io/reagents/doc/)
+# = 📢 Note 📢 =
+
+[kcas](https://github.com/ocaml-multicore/kcas) is the recommended framework for
+composable concurrency. It provides a favourable performance and safer interface
+than Reagents.
+
+Reagents are a research project and not ready for production use. This
+repository is no longer actively developed or maintained.
+
+See [comparison](COMPARISON.md) for details.
 
 # Reagents — Composable lock-free data and synchronization structures
+
+[API reference](https://ocaml-multicore.github.io/reagents/doc/)
 
 Reagents are an experimental library for writing multicore programs. Reagents
 provide an expressive framework for composable multithreading. They support both
