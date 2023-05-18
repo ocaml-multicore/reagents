@@ -120,5 +120,5 @@ module Make (Sched : Scheduler.S) :
 
   let cas ?(never_block = false) r expect update =
     upd ~never_block r (fun current () ->
-        if current = expect then Some (update, ()) else None)
+        if current == expect then Some (update, ()) else None)
 end
